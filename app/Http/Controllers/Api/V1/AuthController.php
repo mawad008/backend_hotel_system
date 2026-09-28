@@ -21,7 +21,7 @@ class AuthController extends Controller
         );
 
         return $this->success([
-            'user' => new UserResource($result['user']->load(['role', 'hotels'])),
+            'user' => new UserResource($result['user']->load(['role.permissions', 'hotels'])),
             'token' => $result['token'],
         ], __('api.login_success'));
     }
