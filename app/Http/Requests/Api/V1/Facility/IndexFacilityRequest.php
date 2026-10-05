@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\V1\Facility;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 /**
  * Explicit allow-list of query parameters for GET /facilities. Anything not
@@ -23,6 +24,7 @@ class IndexFacilityRequest extends FormRequest
         return [
             'search' => ['sometimes', 'nullable', 'string', 'max:255'],
             'is_active' => ['sometimes', 'boolean'],
+            'sort' => ['sometimes', 'nullable', Rule::in(['name', '-name', 'key', '-key', 'sort_order', '-sort_order'])],
             'all' => ['sometimes', 'boolean'],
             'page' => ['sometimes', 'integer', 'min:1'],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
@@ -30,13 +32,14 @@ class IndexFacilityRequest extends FormRequest
     }
 
     /**
-     * @return array{search: string|null, is_active: bool|null}
+     * @return array{search: string|null, is_active: bool|null, sort: string|null}
      */
     public function filters(): array
     {
         return [
             'search' => $this->query('search') ?: null,
             'is_active' => $this->has('is_active') ? $this->boolean('is_active') : null,
+            'sort' => $this->query('sort') ?: null,
         ];
     }
 

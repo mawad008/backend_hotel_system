@@ -85,6 +85,26 @@ class FacilityTest extends TestCase
         ])->assertCreated()->assertJsonPath('data.sort_order', 701);
     }
 
+    public function test_list_can_be_sorted_by_name_and_key(): void
+    {
+        $owner = $this->owner();
+        Facility::factory()->create(['key' => 'zz_sort_b', 'name_i18n' => ['en' => 'Zz Alpha', 'ar' => 'زز ب'], 'sort_order' => 900]);
+        Facility::factory()->create(['key' => 'zz_sort_a', 'name_i18n' => ['en' => 'zz Beta', 'ar' => 'زز أ'], 'sort_order' => 901]);
+
+        $keys = fn (string $sort, string $locale = 'en') => collect(
+            $this->actingAs($owner, 'sanctum')->withHeader('Accept-Language', $locale)
+                ->getJson("/api/v1/facilities?search=zz_sort&sort={$sort}")->assertOk()->json('data')
+        )->pluck('key')->all();
+
+        $this->assertSame(['zz_sort_b', 'zz_sort_a'], $keys('name'));
+        $this->assertSame(['zz_sort_a', 'zz_sort_b'], $keys('-name'));
+        $this->assertSame(['zz_sort_a', 'zz_sort_b'], $keys('name', 'ar'));
+        $this->assertSame(['zz_sort_a', 'zz_sort_b'], $keys('key'));
+        $this->assertSame(['zz_sort_b', 'zz_sort_a'], $keys('-key'));
+
+        $this->actingAs($owner, 'sanctum')->getJson('/api/v1/facilities?sort=bogus')->assertStatus(422);
+    }
+
     public function test_list_supports_search_and_is_active_filter(): void
     {
         Facility::factory()->create(['key' => 'kids_club', 'name_i18n' => ['en' => 'Kids Club']]);

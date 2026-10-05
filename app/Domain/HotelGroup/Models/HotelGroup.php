@@ -13,6 +13,7 @@ class HotelGroup extends Model
 
     protected $fillable = [
         'name',
+        'name_i18n',
         'slug',
         'is_active',
     ];
@@ -20,6 +21,7 @@ class HotelGroup extends Model
     protected function casts(): array
     {
         return [
+            'name_i18n' => 'array',
             'is_active' => 'boolean',
         ];
     }

@@ -14,7 +14,7 @@ class EloquentFacilityRepository implements FacilityRepositoryInterface
     {
         return $this->query($filters)
             ->withCount('hotels')
-            ->orderBy('sort_order')
+            ->tap(fn (Builder $q) => $this->applySort($q, $filters['sort'] ?? null))
             ->orderBy('id')
             ->paginate($perPage)
             ->withQueryString();
@@ -72,5 +72,25 @@ class EloquentFacilityRepository implements FacilityRepositoryInterface
                         ->orWhere('name_i18n', 'like', '%'.$search.'%');
                 });
             });
+    }
+
+    /**
+     * `name` sorts by the request locale's translation (falling back to the
+     * fallback locale), case-insensitively; no sort keeps display order.
+     */
+    private function applySort(Builder $query, ?string $sort): void
+    {
+        $column = ltrim((string) $sort, '-');
+        $direction = str_starts_with((string) $sort, '-') ? 'desc' : 'asc';
+
+        match ($column) {
+            'name' => $query->orderByRaw(
+                'LOWER(COALESCE(JSON_UNQUOTE(JSON_EXTRACT(name_i18n, ?)), JSON_UNQUOTE(JSON_EXTRACT(name_i18n, ?)))) '.$direction,
+                ['$."'.app()->getLocale().'"', '$."'.config('app.fallback_locale', 'en').'"'],
+            ),
+            'key' => $query->orderBy('key', $direction),
+            'sort_order' => $query->orderBy('sort_order', $direction),
+            default => $query->orderBy('sort_order'),
+        };
     }
 }

@@ -52,6 +52,43 @@ class HotelGroupTest extends TestCase
         $this->assertDatabaseHas('hotel_groups', ['id' => $group->id, 'name' => 'New Name']);
     }
 
+    public function test_a_hotel_group_is_created_and_updated_with_arabic_and_english_names(): void
+    {
+        $owner = User::factory()->groupOwner()->create();
+
+        $created = $this->actingAs($owner, 'sanctum')->postJson('/api/v1/hotel-groups', [
+            'name_i18n' => ['en' => 'Nuzul Hotels', 'ar' => 'فنادق نُزُل'],
+            'slug' => 'nuzul-hotels',
+        ])->assertCreated()
+            ->assertJsonPath('data.name', 'Nuzul Hotels')
+            ->assertJsonPath('data.name_i18n.ar', 'فنادق نُزُل')
+            ->assertJsonPath('data.name_i18n.en', 'Nuzul Hotels');
+
+        $id = $created->json('data.id');
+
+        $this->actingAs($owner, 'sanctum')->putJson("/api/v1/hotel-groups/{$id}", [
+            'name_i18n' => ['en' => 'Nuzul Group', 'ar' => 'مجموعة نُزُل'],
+        ])->assertOk()
+            ->assertJsonPath('data.name', 'Nuzul Group')
+            ->assertJsonPath('data.name_i18n.ar', 'مجموعة نُزُل');
+
+        // A bare legacy `name` update keeps the English entry in sync and the Arabic one intact.
+        $this->actingAs($owner, 'sanctum')->putJson("/api/v1/hotel-groups/{$id}", ['name' => 'Nuzul'])
+            ->assertOk()
+            ->assertJsonPath('data.name_i18n.en', 'Nuzul')
+            ->assertJsonPath('data.name_i18n.ar', 'مجموعة نُزُل');
+    }
+
+    public function test_both_language_names_are_required_when_name_i18n_is_sent(): void
+    {
+        $owner = User::factory()->groupOwner()->create();
+
+        $this->actingAs($owner, 'sanctum')->postJson('/api/v1/hotel-groups', [
+            'name_i18n' => ['en' => 'Only English'],
+            'slug' => 'only-english',
+        ])->assertStatus(422)->assertJsonValidationErrors(['name_i18n.ar']);
+    }
+
     public function test_hotel_manager_cannot_manage_hotel_groups(): void
     {
         $manager = User::factory()->hotelManager()->create();

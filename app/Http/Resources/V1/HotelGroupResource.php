@@ -16,6 +16,7 @@ class HotelGroupResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'name_i18n' => $this->name_i18n,
             'slug' => $this->slug,
             'is_active' => $this->is_active,
             'created_at' => $this->created_at,

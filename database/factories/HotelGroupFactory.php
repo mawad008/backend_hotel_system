@@ -19,6 +19,7 @@ class HotelGroupFactory extends Factory
 
         return [
             'name' => $name,
+            'name_i18n' => ['en' => $name],
             'slug' => Str::slug($name).'-'.fake()->unique()->numberBetween(1000, 999999),
             'is_active' => true,
         ];

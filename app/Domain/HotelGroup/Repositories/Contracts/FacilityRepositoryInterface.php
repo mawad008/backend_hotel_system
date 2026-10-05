@@ -9,7 +9,7 @@ use Illuminate\Support\Collection;
 interface FacilityRepositoryInterface
 {
     /**
-     * @param  array{search?: string|null, is_active?: bool|null}  $filters
+     * @param  array{search?: string|null, is_active?: bool|null, sort?: string|null}  $filters
      */
     public function paginate(array $filters, int $perPage = 15): LengthAwarePaginator;
 
