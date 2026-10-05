@@ -12,9 +12,10 @@ interface RoomRepositoryInterface
 {
     /**
      * Rooms belonging to $hotel, filtered through $user's own hotel
-     * access, with an optional room_type_id filter.
+     * access, with optional room_type_id and room-number search filters,
+     * newest first.
      */
-    public function paginateAccessibleBy(User $user, Hotel $hotel, ?int $roomTypeId = null, int $perPage = 15): LengthAwarePaginator;
+    public function paginateAccessibleBy(User $user, Hotel $hotel, ?int $roomTypeId = null, int $perPage = 15, ?string $search = null): LengthAwarePaginator;
 
     /**
      * Plain lookup by id — no authorization decision is made here, that

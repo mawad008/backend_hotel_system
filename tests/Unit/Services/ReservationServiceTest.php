@@ -492,7 +492,7 @@ class ReservationServiceTest extends TestCase
 
             public function __construct(private readonly Room $room) {}
 
-            public function paginateAccessibleBy($user, $hotel, ?int $roomTypeId = null, int $perPage = 15): LengthAwarePaginator
+            public function paginateAccessibleBy($user, $hotel, ?int $roomTypeId = null, int $perPage = 15, ?string $search = null): LengthAwarePaginator
             {
                 throw new LogicException('not used by this test');
             }

@@ -18,9 +18,17 @@ class RoleService
         private readonly AuditLogger $auditLogger,
     ) {}
 
+    /**
+     * Dashboard-manageable roles only. The `guest` system role stays in the
+     * table for internal use (it marks accounts that must never reach the
+     * staff dashboard) but has no dashboard use, so it is never listed —
+     * which also keeps it out of the user form's role picker.
+     */
     public function list(): Collection
     {
-        return $this->roles->all();
+        return $this->roles->all()
+            ->reject(fn (Role $role) => $role->slug === Role::GUEST)
+            ->values();
     }
 
     public function find(int $id): ?Role

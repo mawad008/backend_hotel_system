@@ -93,7 +93,7 @@ class HotelAccessTest extends TestCase
         $this->actingAs($manager, 'sanctum')->getJson("/api/v1/hotels/{$hotelC->id}")->assertStatus(403);
     }
 
-    public function test_hotel_manager_cannot_create_or_update_hotels(): void
+    public function test_hotel_manager_cannot_create_or_delete_hotels(): void
     {
         $group = HotelGroup::factory()->create();
         $hotel = Hotel::factory()->create(['hotel_group_id' => $group->id]);
@@ -108,6 +108,49 @@ class HotelAccessTest extends TestCase
                 'deposit_percentage' => 10,
             ])
             ->assertStatus(403);
+
+        $this->actingAs($manager, 'sanctum')
+            ->deleteJson("/api/v1/hotels/{$hotel->id}")
+            ->assertStatus(403);
+    }
+
+    public function test_hotel_manager_can_edit_the_bilingual_name_and_description_of_an_assigned_hotel(): void
+    {
+        $hotel = Hotel::factory()->create();
+        $manager = User::factory()->hotelManager()->create();
+        $manager->hotels()->attach($hotel);
+
+        $this->actingAs($manager, 'sanctum')
+            ->putJson("/api/v1/hotels/{$hotel->id}", [
+                'name_i18n' => ['en' => 'Nuzul Riyadh', 'ar' => 'نُزُل الرياض'],
+                'description_i18n' => ['en' => 'A calm stay.', 'ar' => 'إقامة هادئة.'],
+                // The dashboard form always resubmits these unchanged.
+                'hotel_group_id' => $hotel->hotel_group_id,
+                'is_active' => $hotel->is_active,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.name', 'Nuzul Riyadh')
+            ->assertJsonPath('data.name_i18n.ar', 'نُزُل الرياض')
+            ->assertJsonPath('data.description_i18n.ar', 'إقامة هادئة.');
+    }
+
+    public function test_hotel_manager_cannot_regroup_or_deactivate_a_hotel(): void
+    {
+        $hotel = Hotel::factory()->create(['is_active' => true]);
+        $otherGroup = HotelGroup::factory()->create();
+        $manager = User::factory()->hotelManager()->create();
+        $manager->hotels()->attach($hotel);
+
+        $this->actingAs($manager, 'sanctum')
+            ->putJson("/api/v1/hotels/{$hotel->id}", ['hotel_group_id' => $otherGroup->id, 'is_active' => false])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['hotel_group_id', 'is_active']);
+    }
+
+    public function test_hotel_manager_cannot_edit_a_hotel_they_are_not_assigned_to(): void
+    {
+        $hotel = Hotel::factory()->create();
+        $manager = User::factory()->hotelManager()->create();
 
         $this->actingAs($manager, 'sanctum')
             ->putJson("/api/v1/hotels/{$hotel->id}", ['name' => 'Renamed'])

@@ -128,6 +128,27 @@ class RoomApiTest extends TestCase
             ->assertJsonPath('meta.total', 3);
     }
 
+    public function test_list_page_size_is_selectable_up_to_100(): void
+    {
+        $hotel = Hotel::factory()->create();
+        $roomType = RoomType::factory()->create(['hotel_id' => $hotel->id]);
+        Room::factory()->count(60)->sequence(fn ($s) => ['room_number' => (string) (100 + $s->index)])
+            ->create(['hotel_id' => $hotel->id, 'room_type_id' => $roomType->id]);
+        $owner = User::factory()->groupOwner()->create();
+
+        $this->actingAs($owner, 'sanctum')
+            ->getJson("/api/v1/hotels/{$hotel->id}/rooms?per_page=50")
+            ->assertOk()
+            ->assertJsonCount(50, 'data')
+            ->assertJsonPath('meta.per_page', 50)
+            ->assertJsonPath('meta.last_page', 2);
+
+        $this->actingAs($owner, 'sanctum')
+            ->getJson("/api/v1/hotels/{$hotel->id}/rooms?per_page=101")
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['per_page']);
+    }
+
     public function test_rooms_can_be_filtered_by_room_type_id(): void
     {
         $hotel = Hotel::factory()->create();
@@ -141,6 +162,92 @@ class RoomApiTest extends TestCase
             ->getJson("/api/v1/hotels/{$hotel->id}/rooms?room_type_id={$roomTypeA->id}")
             ->assertOk()
             ->assertJsonPath('meta.total', 2);
+    }
+
+    public function test_list_is_newest_first_so_a_just_created_room_is_on_page_one(): void
+    {
+        $hotel = Hotel::factory()->create();
+        $roomType = RoomType::factory()->create(['hotel_id' => $hotel->id]);
+        Room::factory()->count(16)->sequence(fn ($s) => ['room_number' => (string) (100 + $s->index)])
+            ->create(['hotel_id' => $hotel->id, 'room_type_id' => $roomType->id]);
+        $owner = User::factory()->groupOwner()->create();
+
+        $created = $this->actingAs($owner, 'sanctum')->postJson("/api/v1/hotels/{$hotel->id}/rooms", [
+            'room_type_id' => $roomType->id, 'room_number' => '001',
+        ])->assertCreated()->json('data.id');
+
+        $this->actingAs($owner, 'sanctum')
+            ->getJson("/api/v1/hotels/{$hotel->id}/rooms")
+            ->assertOk()
+            ->assertJsonPath('meta.total', 17)
+            ->assertJsonPath('data.0.id', $created);
+    }
+
+    public function test_pages_do_not_skip_or_repeat_rooms(): void
+    {
+        $hotel = Hotel::factory()->create();
+        $roomType = RoomType::factory()->create(['hotel_id' => $hotel->id]);
+        Room::factory()->count(20)->sequence(fn ($s) => ['room_number' => (string) (300 - $s->index)])
+            ->create(['hotel_id' => $hotel->id, 'room_type_id' => $roomType->id]);
+        $owner = User::factory()->groupOwner()->create();
+
+        $ids = collect([1, 2])->flatMap(fn ($page) => $this->actingAs($owner, 'sanctum')
+            ->getJson("/api/v1/hotels/{$hotel->id}/rooms?page={$page}")
+            ->assertOk()
+            ->json('data.*.id'));
+
+        $this->assertCount(20, $ids);
+        $this->assertCount(20, $ids->unique());
+    }
+
+    public function test_rooms_can_be_searched_by_room_number_across_all_pages(): void
+    {
+        $hotel = Hotel::factory()->create();
+        $roomType = RoomType::factory()->create(['hotel_id' => $hotel->id]);
+        Room::factory()->count(20)->sequence(fn ($s) => ['room_number' => (string) (500 + $s->index)])
+            ->create(['hotel_id' => $hotel->id, 'room_type_id' => $roomType->id]);
+        $owner = User::factory()->groupOwner()->create();
+
+        // 500 is the oldest room — on page 2 of an unfiltered list.
+        $this->actingAs($owner, 'sanctum')
+            ->getJson("/api/v1/hotels/{$hotel->id}/rooms?search=500")
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.room_number', '500');
+
+        $this->actingAs($owner, 'sanctum')
+            ->getJson("/api/v1/hotels/{$hotel->id}/rooms?search=51")
+            ->assertOk()
+            ->assertJsonPath('meta.total', 10);
+    }
+
+    public function test_search_treats_like_wildcards_literally(): void
+    {
+        $hotel = Hotel::factory()->create();
+        $roomType = RoomType::factory()->create(['hotel_id' => $hotel->id]);
+        Room::factory()->create(['hotel_id' => $hotel->id, 'room_type_id' => $roomType->id, 'room_number' => '101']);
+        $owner = User::factory()->groupOwner()->create();
+
+        $this->actingAs($owner, 'sanctum')
+            ->getJson("/api/v1/hotels/{$hotel->id}/rooms?search=%25")
+            ->assertOk()
+            ->assertJsonPath('meta.total', 0);
+    }
+
+    public function test_search_never_widens_beyond_the_route_hotel(): void
+    {
+        $hotelA = Hotel::factory()->create();
+        $hotelB = Hotel::factory()->create();
+        $typeA = RoomType::factory()->create(['hotel_id' => $hotelA->id]);
+        $typeB = RoomType::factory()->create(['hotel_id' => $hotelB->id]);
+        Room::factory()->create(['hotel_id' => $hotelA->id, 'room_type_id' => $typeA->id, 'room_number' => '777']);
+        Room::factory()->create(['hotel_id' => $hotelB->id, 'room_type_id' => $typeB->id, 'room_number' => '777']);
+        $owner = User::factory()->groupOwner()->create();
+
+        $this->actingAs($owner, 'sanctum')
+            ->getJson("/api/v1/hotels/{$hotelA->id}/rooms?search=777")
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1);
     }
 
     public function test_show_returns_the_requested_room(): void

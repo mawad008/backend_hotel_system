@@ -11,12 +11,21 @@ use Illuminate\Support\Collection;
 
 class EloquentRoomRepository implements RoomRepositoryInterface
 {
-    public function paginateAccessibleBy(User $user, Hotel $hotel, ?int $roomTypeId = null, int $perPage = 15): LengthAwarePaginator
+    public function paginateAccessibleBy(User $user, Hotel $hotel, ?int $roomTypeId = null, int $perPage = 15, ?string $search = null): LengthAwarePaginator
     {
         return Room::query()
             ->accessibleBy($user)
             ->where('hotel_id', $hotel->id)
             ->when($roomTypeId !== null, fn ($query) => $query->where('room_type_id', $roomTypeId))
+            ->when($search !== null, fn ($query) => $query->where(
+                'room_number',
+                'like',
+                '%'.addcslashes((string) $search, '%_\\').'%',
+            ))
+            // Explicit, total order: without it LIMIT/OFFSET pages are not
+            // stable and a room can be skipped across pages. Newest first so
+            // a just-created room is on page 1.
+            ->orderByDesc('id')
             ->paginate($perPage);
     }
 

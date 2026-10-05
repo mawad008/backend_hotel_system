@@ -46,7 +46,7 @@ class UpdateHotelRequest extends FormRequest
         }
 
         return [
-            'hotel_group_id' => ['sometimes', 'integer', 'exists:hotel_groups,id'],
+            'hotel_group_id' => ['sometimes', 'integer', 'exists:hotel_groups,id', ...$this->unchangedUnlessManager($hotel?->hotel_group_id)],
             'name' => ['sometimes', 'string', 'max:255'],
             ...$i18n,
             'star_rating' => ['sometimes', 'nullable', 'integer', 'between:1,5'],
@@ -73,7 +73,7 @@ class UpdateHotelRequest extends FormRequest
             'country' => ['sometimes', 'nullable', 'string', 'max:255'],
             'city' => ['sometimes', 'nullable', 'string', 'max:255'],
             'timezone' => ['sometimes', 'string', 'max:64'],
-            'is_active' => ['sometimes', 'boolean'],
+            'is_active' => ['sometimes', 'boolean', ...$this->unchangedUnlessManager($hotel?->is_active)],
             ...$this->guestDetailRules(),
         ];
     }
@@ -102,5 +102,26 @@ class UpdateHotelRequest extends FormRequest
                 $validator->errors()->add('city_id', __('api.location.city_country_mismatch'));
             }
         });
+    }
+
+    /**
+     * A `hotels.update`-only editor (Hotel Manager) may resubmit the hotel's
+     * current group / active status — the dashboard form always sends them —
+     * but may not change either: regrouping and deactivating stay
+     * `hotels.manage`.
+     *
+     * @return list<\Closure>
+     */
+    private function unchangedUnlessManager(mixed $current): array
+    {
+        if ($this->user()?->hasPermission('hotels.manage')) {
+            return [];
+        }
+
+        return [function (string $attribute, mixed $value, \Closure $fail) use ($current): void {
+            if ($value != $current) {
+                $fail(__('validation.hotel_manage_required'));
+            }
+        }];
     }
 }

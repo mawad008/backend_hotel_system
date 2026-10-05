@@ -6,6 +6,7 @@ use App\Domain\HotelGroup\Models\Hotel;
 use App\Domain\Inventory\Models\Room;
 use App\Domain\Inventory\Services\RoomService;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\V1\Room\IndexRoomRequest;
 use App\Http\Requests\Api\V1\Room\StoreRoomRequest;
 use App\Http\Requests\Api\V1\Room\UpdateRoomRequest;
 use App\Http\Requests\Api\V1\Room\UpdateRoomStatusRequest;
@@ -20,15 +21,14 @@ class RoomController extends Controller
     /**
      * Rooms visible here are always resolved from $hotel (the authorized
      * route context) — a client cannot widen this by passing any request
-     * parameter. room_type_id, if present, only narrows the list.
+     * parameter. room_type_id and search (room number), if present, only
+     * narrow the list.
      */
-    public function index(Request $request, Hotel $hotel): JsonResponse
+    public function index(IndexRoomRequest $request, Hotel $hotel): JsonResponse
     {
         $this->authorize('viewAny', [Room::class, $hotel]);
 
-        $roomTypeId = $request->filled('room_type_id') ? (int) $request->query('room_type_id') : null;
-
-        $rooms = $this->rooms->listForHotel($request->user(), $hotel, $roomTypeId);
+        $rooms = $this->rooms->listForHotel($request->user(), $hotel, $request->roomTypeId(), $request->search(), $request->perPage());
         $rooms->getCollection()->load('media');
 
         return $this->success(RoomResource::collection($rooms));

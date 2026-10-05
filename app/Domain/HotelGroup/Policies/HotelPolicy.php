@@ -41,7 +41,7 @@ class HotelPolicy
      */
     public function update(User $user, Hotel $hotel): bool
     {
-        return $user->hasPermission('hotels.manage')
+        return $this->canEdit($user)
             && $this->hotelAccess->canAccessHotel($user, $hotel->id);
     }
 
@@ -59,7 +59,17 @@ class HotelPolicy
      */
     public function manageMedia(User $user, Hotel $hotel): bool
     {
-        return $user->hasPermission('hotels.manage')
+        return $this->canEdit($user)
             && $this->hotelAccess->canAccessHotel($user, $hotel->id);
+    }
+
+    /**
+     * Editing an existing hotel: `hotels.manage` (full control) or the
+     * narrower `hotels.update` (Hotel Manager — UpdateHotelRequest keeps the
+     * group and active status out of its reach).
+     */
+    private function canEdit(User $user): bool
+    {
+        return $user->hasPermission('hotels.manage') || $user->hasPermission('hotels.update');
     }
 }

@@ -91,13 +91,14 @@ class RoleManagementTest extends TestCase
     public function test_a_system_role_cannot_be_deleted(): void
     {
         $owner = User::factory()->groupOwner()->create();
-        $guestRole = Role::where('slug', Role::GUEST)->firstOrFail();
+        $systemRole = Role::where('slug', Role::RECEPTION)->firstOrFail();
+        $systemRole->users()->delete(); // isolate the system-role rule from the in-use rule
 
         $this->actingAs($owner, 'sanctum')
-            ->deleteJson("/api/v1/roles/{$guestRole->id}")
+            ->deleteJson("/api/v1/roles/{$systemRole->id}")
             ->assertStatus(422);
 
-        $this->assertDatabaseHas('roles', ['id' => $guestRole->id]);
+        $this->assertDatabaseHas('roles', ['id' => $systemRole->id]);
     }
 
     public function test_a_role_assigned_to_users_cannot_be_deleted(): void

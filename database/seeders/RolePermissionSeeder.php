@@ -28,6 +28,7 @@ class RolePermissionSeeder extends Seeder
             'hotel-groups.manage' => ['Manage hotel groups', 'إدارة مجموعات الفنادق', 'Create and update hotel groups', 'إنشاء مجموعات الفنادق وتحديثها'],
             'hotels.view' => ['View hotels', 'عرض الفنادق', 'View hotels within authorized scope', 'عرض الفنادق ضمن النطاق المصرح به'],
             'hotels.manage' => ['Manage hotels', 'إدارة الفنادق', 'Create and update hotels', 'إنشاء الفنادق وتحديثها'],
+            'hotels.update' => ['Edit assigned hotels', 'تعديل الفنادق المسندة', 'Edit the profile and content of assigned hotels (no create, delete, group change or deactivation)', 'تعديل بيانات ومحتوى الفنادق المسندة (دون الإنشاء أو الحذف أو تغيير المجموعة أو إيقاف التفعيل)'],
             'facilities.view' => ['View facilities', 'عرض المرافق', 'View the hotel facility catalog', 'عرض كتالوج مرافق الفندق'],
             'facilities.manage' => ['Manage facilities', 'إدارة المرافق', 'Create, update, delete, activate/deactivate hotel facilities', 'إنشاء مرافق الفندق وتحديثها وحذفها وتفعيلها/تعطيلها'],
             'locations.view' => ['View locations', 'عرض المواقع', 'View country and city master data', 'عرض بيانات الدول والمدن الأساسية'],
@@ -110,7 +111,12 @@ class RolePermissionSeeder extends Seeder
                 'name_ar' => 'مدير الفندق',
                 'description_en' => 'Manages one or more assigned hotels.',
                 'description_ar' => 'يدير فندقًا واحدًا أو أكثر من الفنادق المسندة إليه.',
-                'permissions' => ['hotels.view', 'locations.view', 'inventory.view', 'inventory.manage', 'reservations.view', 'reservations.manage', 'payments.manage', 'payments.view', 'identity-verification.view', 'identity-verification.submit', 'identity-verification.review', 'check-in.perform', 'digital-access.view', 'digital-access.revoke', 'services.view', 'services.manage', 'service-orders.view', 'service-orders.manage', 'folio.view', 'checkout.perform', 'invoice.view', 'loyalty.view', 'loyalty.manage', 'notifications.view', 'reviews.view', 'reviews.moderate', 'review-categories.manage', 'problems.view', 'problems.manage', 'guests.view', 'guests.manage', 'reports.view', 'audit.view'],
+                // hotels.update: edits their own hotels' profile/content
+                // (bilingual name/description, media, …) — creating,
+                // deleting, regrouping or deactivating a hotel stays
+                // hotels.manage. facilities.view feeds the hotel form's
+                // facility picker.
+                'permissions' => ['hotels.view', 'hotels.update', 'facilities.view', 'locations.view', 'inventory.view', 'inventory.manage', 'reservations.view', 'reservations.manage', 'payments.manage', 'payments.view', 'identity-verification.view', 'identity-verification.submit', 'identity-verification.review', 'check-in.perform', 'digital-access.view', 'digital-access.revoke', 'services.view', 'services.manage', 'service-orders.view', 'service-orders.manage', 'folio.view', 'checkout.perform', 'invoice.view', 'loyalty.view', 'loyalty.manage', 'notifications.view', 'reviews.view', 'reviews.moderate', 'review-categories.manage', 'problems.view', 'problems.manage', 'guests.view', 'guests.manage', 'reports.view', 'audit.view'],
             ],
             Role::RECEPTION => [
                 'name_en' => 'Reception',

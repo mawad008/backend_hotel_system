@@ -132,6 +132,7 @@ return [
     'string' => 'يجب أن يكون :attribute نصًا.',
     'timezone' => 'يجب أن يكون :attribute منطقة زمنية صالحة.',
     'unique' => 'هذه القيمة مستخدمة بالفعل.',
+    'hotel_manage_required' => 'لا يمكن تغيير هذا الحقل إلا بصلاحية إدارة الفنادق.',
     'display_order_taken' => 'رقم ترتيب العرض مستخدم بالفعل.',
     'uploaded' => 'فشل رفع :attribute.',
     'uppercase' => 'يجب أن يكون :attribute بأحرف كبيرة.',

@@ -37,11 +37,12 @@ class RoomService
 
     /**
      * Rooms for $hotel, resolved from $user's own hotel access — never
-     * from a request parameter. $roomTypeId optionally narrows the list.
+     * from a request parameter. $roomTypeId and $search (room number)
+     * optionally narrow the list.
      */
-    public function listForHotel(User $user, Hotel $hotel, ?int $roomTypeId, int $perPage = 15): LengthAwarePaginator
+    public function listForHotel(User $user, Hotel $hotel, ?int $roomTypeId, ?string $search = null, int $perPage = 15): LengthAwarePaginator
     {
-        return $this->rooms->paginateAccessibleBy($user, $hotel, $roomTypeId, $perPage);
+        return $this->rooms->paginateAccessibleBy($user, $hotel, $roomTypeId, $perPage, $search);
     }
 
     /**

@@ -21,7 +21,8 @@ class RolePolicy
 
     public function view(User $user, Role $role): bool
     {
-        return $user->hasPermission('roles.view') || $user->hasPermission('roles.manage');
+        return ! $this->isInternal($role)
+            && ($user->hasPermission('roles.view') || $user->hasPermission('roles.manage'));
     }
 
     public function create(User $user): bool
@@ -31,11 +32,20 @@ class RolePolicy
 
     public function update(User $user, Role $role): bool
     {
-        return $user->hasPermission('roles.manage');
+        return ! $this->isInternal($role) && $user->hasPermission('roles.manage');
     }
 
     public function delete(User $user, Role $role): bool
     {
-        return $user->hasPermission('roles.manage');
+        return ! $this->isInternal($role) && $user->hasPermission('roles.manage');
+    }
+
+    /**
+     * The `guest` role is internal (no dashboard use) — hidden from the
+     * Roles module and not viewable/editable/deletable through it.
+     */
+    private function isInternal(Role $role): bool
+    {
+        return $role->slug === Role::GUEST;
     }
 }
