@@ -47,6 +47,12 @@ class FacilityService
                 $data['key'] = $this->deriveKey($data['name_i18n'] ?? []);
             }
 
+            // Display order is unique per catalog; an omitted one takes the
+            // next free slot rather than colliding at the column default 0.
+            if (! array_key_exists('sort_order', $data)) {
+                $data['sort_order'] = (int) Facility::query()->max('sort_order') + 1;
+            }
+
             $facility = $this->facilities->create($data);
 
             $this->auditLogger->record($actor, 'facility.created', $facility, after: $facility->toArray());

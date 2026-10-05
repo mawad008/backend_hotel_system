@@ -33,9 +33,18 @@ class UpdateFacilityRequest extends FormRequest
             'key' => ['sometimes', 'string', 'max:64', 'alpha_dash', Rule::unique('facilities', 'key')->ignore($facility)],
             ...$i18n,
             'icon' => ['sometimes', 'nullable', 'string', 'max:64'],
-            'sort_order' => ['sometimes', 'integer', 'min:0'],
+            // Display order is unique across the catalog so the guest-facing
+            // facility list has one unambiguous sequence.
+            'sort_order' => ['sometimes', 'integer', 'min:0', Rule::unique('facilities', 'sort_order')->ignore($facility)],
             // is_active is intentionally not accepted here — use the
             // activate/deactivate endpoints.
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'sort_order.unique' => __('validation.display_order_taken'),
         ];
     }
 }

@@ -54,6 +54,37 @@ class FacilityTest extends TestCase
         ])->assertStatus(422)->assertJsonValidationErrors(['key']);
     }
 
+    public function test_display_order_must_be_unique_on_create_and_update(): void
+    {
+        $owner = $this->owner();
+        Facility::factory()->create(['key' => 'order_taken', 'sort_order' => 500]);
+        $other = Facility::factory()->create(['key' => 'order_other', 'sort_order' => 501]);
+
+        $this->actingAs($owner, 'sanctum')->withHeader('Accept-Language', 'ar')->postJson('/api/v1/facilities', [
+            'name_i18n' => ['en' => 'Valet'],
+            'sort_order' => 500,
+        ])->assertStatus(422)
+            ->assertJsonValidationErrors(['sort_order' => 'رقم ترتيب العرض مستخدم بالفعل.']);
+
+        $this->actingAs($owner, 'sanctum')
+            ->putJson("/api/v1/facilities/{$other->id}", ['sort_order' => 500])
+            ->assertStatus(422)->assertJsonValidationErrors(['sort_order']);
+
+        // Re-saving a facility with its own order is not a conflict.
+        $this->actingAs($owner, 'sanctum')
+            ->putJson("/api/v1/facilities/{$other->id}", ['sort_order' => 501])
+            ->assertOk();
+    }
+
+    public function test_an_omitted_display_order_takes_the_next_free_slot(): void
+    {
+        Facility::factory()->create(['key' => 'order_top', 'sort_order' => 700]);
+
+        $this->actingAs($this->owner(), 'sanctum')->postJson('/api/v1/facilities', [
+            'name_i18n' => ['en' => 'Kids Pool'],
+        ])->assertCreated()->assertJsonPath('data.sort_order', 701);
+    }
+
     public function test_list_supports_search_and_is_active_filter(): void
     {
         Facility::factory()->create(['key' => 'kids_club', 'name_i18n' => ['en' => 'Kids Club']]);

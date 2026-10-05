@@ -33,7 +33,16 @@ class StoreFacilityRequest extends FormRequest
             ...$i18n,
             'icon' => ['sometimes', 'nullable', 'string', 'max:64'],
             'is_active' => ['sometimes', 'boolean'],
-            'sort_order' => ['sometimes', 'integer', 'min:0'],
+            // Display order is unique across the catalog so the guest-facing
+            // facility list has one unambiguous sequence.
+            'sort_order' => ['sometimes', 'integer', 'min:0', Rule::unique('facilities', 'sort_order')],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'sort_order.unique' => __('validation.display_order_taken'),
         ];
     }
 }
