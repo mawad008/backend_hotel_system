@@ -134,6 +134,11 @@ return [
         'dummy' => [
             // specimen_passport | expired_passport | bad_mrz_passport |
             // national_id_no_mrz | driver_license | no_document | provider_timeout
+            // | egyptian_id_fixture — the E2E test fixture: always the fixed
+            //   Egyptian National ID (سامي عادل فؤاد منصور / 29001150112357),
+            //   no image read; an exact claim VERIFIES the document (never in
+            //   production). For the selfie to auto-approve as well, set
+            //   IDENTITY_VERIFICATION_AUTO_APPROVE_THRESHOLD (dummy face = 90).
             'scenario' => env('IDENTITY_DUMMY_DOCUMENT_SCENARIO', 'specimen_passport'),
         ],
 

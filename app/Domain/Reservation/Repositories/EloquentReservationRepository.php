@@ -12,9 +12,30 @@ use Illuminate\Support\Collection;
 
 class EloquentReservationRepository implements ReservationRepositoryInterface
 {
-    public function paginateAccessibleBy(User $user, int $perPage = 15): LengthAwarePaginator
+    public function paginateAccessibleBy(User $user, array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
-        return $this->scopeToAccess(Reservation::query(), $user)->paginate($perPage);
+        return $this->scopeToAccess(Reservation::query(), $user)
+            ->when($filters['status'] ?? null, fn (Builder $q, string $status) => $q->where('status', $status))
+            ->when($filters['hotel_id'] ?? null, fn (Builder $q, int $hotelId) => $q->where('hotel_id', $hotelId))
+            ->when($filters['check_in_from'] ?? null, fn (Builder $q, string $from) => $q->whereDate('check_in', '>=', $from))
+            ->when($filters['check_in_to'] ?? null, fn (Builder $q, string $to) => $q->whereDate('check_in', '<=', $to))
+            ->when($filters['search'] ?? null, function (Builder $q, string $search): void {
+                // A leading "#" is how the dashboard displays ids.
+                $term = ltrim($search, '#');
+                $q->where(function (Builder $inner) use ($term): void {
+                    if (ctype_digit($term)) {
+                        $inner->where('id', (int) $term);
+                    }
+                    $inner->orWhereHas('guest', function (Builder $g) use ($term): void {
+                        $g->where('name', 'like', '%'.$term.'%')
+                            ->orWhere('phone', 'like', '%'.$term.'%')
+                            ->orWhere('email', 'like', '%'.$term.'%');
+                    });
+                });
+            })
+            ->latest('id')
+            ->paginate($perPage)
+            ->withQueryString();
     }
 
     public function findAccessibleBy(User $user, int $id): ?Reservation

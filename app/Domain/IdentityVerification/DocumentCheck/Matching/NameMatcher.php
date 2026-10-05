@@ -28,8 +28,16 @@ use App\Domain\IdentityVerification\DocumentCheck\IdentityTextNormalizer;
  *              - Latin script: Jaro-Winkler ≥ {@see self::STRONG} AND at most
  *                one edit apart (MOHAMED / MOHAMMED), or an MRZ-truncated
  *                surname prefix.
- *  WEAK    — not strong, but ≥ half of the guest tokens pair at
- *            ≥ {@see self::WEAK} and the surname does → needs review.
+ *  PATRONYMIC (Egyptian national ID) — the card's name is a lineage chain
+ *            (own name, father, grandfather, …), so its last token is not a
+ *            family name everyone writes. ≥ 3 guest tokens that are, in
+ *            order, the leading tokens of the printed name (e.g. the usual
+ *            "triple name") are also STRONG.
+ *  WEAK    — not strong, but either every guest token is printed on the
+ *            document (≥ 2 tokens, just not covering the anchors), or ≥ half
+ *            of the guest tokens pair at ≥ {@see self::WEAK} and the surname
+ *            does → needs review. A name made only of tokens that ARE on the
+ *            card is never a hard mismatch.
  *  MISMATCH — anything else.
  *
  * The score (0..100) is the mean best-pair similarity, kept only as an
@@ -55,6 +63,7 @@ final class NameMatcher
      * @param  string  $documentGiven  given (+ middle) names as printed
      * @param  string  $documentSurname  surname as printed
      * @param  bool  $surnameMayBeTruncated  MRZ name field ran out of room
+     * @param  bool  $patronymic  the printed name is a lineage chain (Egyptian ID)
      * @return array{result: string, score: int}
      */
     public static function compare(
@@ -62,6 +71,7 @@ final class NameMatcher
         #[\SensitiveParameter] string $documentGiven,
         #[\SensitiveParameter] string $documentSurname,
         bool $surnameMayBeTruncated = false,
+        bool $patronymic = false,
     ): array {
         $documentFull = trim($documentGiven.' '.$documentSurname);
 
@@ -116,6 +126,18 @@ final class NameMatcher
 
         if (count($claimTokens) >= 2 && $allStrong && $coversAnchors) {
             return ['result' => self::RESULT_STRONG, 'score' => $score];
+        }
+
+        // Egyptian cards: own + father + grandfather (+ …) names, in order.
+        if ($patronymic && $allStrong && count($claimTokens) >= 3
+            && $claimTokens === array_slice($docTokens, 0, count($claimTokens))) {
+            return ['result' => self::RESULT_STRONG, 'score' => $score];
+        }
+
+        // Every entered name is on the card, it just doesn't cover the
+        // anchors (e.g. first + father name only): a human confirms it.
+        if (count($claimTokens) >= 2 && $allStrong) {
+            return ['result' => self::RESULT_WEAK, 'score' => $score];
         }
 
         $weakDoc = $matchedDoc(self::WEAK);

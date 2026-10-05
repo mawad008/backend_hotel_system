@@ -40,6 +40,7 @@ class ReviewResource extends JsonResource
             'hotel' => $this->when($isStaff && $this->relationLoaded('hotel'), fn () => [
                 'id' => $this->hotel?->id,
                 'name' => $this->hotel?->name,
+                'name_i18n' => $this->hotel?->name_i18n,
             ]),
             'moderated_at' => $this->when($isStaff, $this->moderated_at),
         ];

@@ -14,6 +14,9 @@ namespace App\Domain\IdentityVerification\Provider\Data;
  * deleted — one per analysis (front and back are analysed separately);
  * empty when the provider kept nothing.
  * `providerStatus` is a short safe code for observability only.
+ * `testFixture` is true only for the dummy provider's end-to-end test
+ * fixture ({@see \App\Domain\IdentityVerification\Provider\DummyIdentityDocumentProvider::SCENARIO_EGYPTIAN_ID_FIXTURE});
+ * a real provider never sets it.
  */
 final class DocumentExtractionResult
 {
@@ -41,12 +44,22 @@ final class DocumentExtractionResult
         public readonly ?string $failure,
         public readonly string $providerStatus,
         public readonly array $artifactReferences,
+        public readonly bool $testFixture = false,
     ) {}
 
     /** @param string|list<string>|null $artifacts */
     public static function extracted(ExtractedIdentityDocument $document, string $providerStatus = 'succeeded', string|array|null $artifacts = null): self
     {
         return new self($document, null, $providerStatus, self::list($artifacts));
+    }
+
+    /**
+     * A fixed test fixture (dummy provider only) — its document type may be
+     * verified automatically outside production, see IdentityDocumentCheckService.
+     */
+    public static function testFixture(ExtractedIdentityDocument $document, string $artifact): self
+    {
+        return new self($document, null, 'test_fixture', self::list($artifact), testFixture: true);
     }
 
     /** @param string|list<string>|null $artifacts */

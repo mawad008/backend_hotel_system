@@ -19,7 +19,10 @@ class UserService
 
     public function list(int $perPage = 15): LengthAwarePaginator
     {
-        return $this->users->paginate(perPage: $perPage);
+        // Hotels are eager-loaded so the list carries each user's assignments —
+        // the dashboard pre-fills its edit form from these rows, and a missing
+        // `hotels` key would submit `hotel_ids: []` and wipe the real access.
+        return $this->users->paginate($this->users->query()->with('hotels'), $perPage);
     }
 
     /**

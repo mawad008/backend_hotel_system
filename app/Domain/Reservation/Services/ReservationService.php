@@ -44,11 +44,13 @@ class ReservationService
 
     /**
      * Reservations resolved from $user's own hotel access — never from a
-     * request parameter.
+     * request parameter. $filters only narrow within that scope.
+     *
+     * @param  array<string, mixed>  $filters
      */
-    public function listAccessibleBy(User $user, int $perPage = 15): LengthAwarePaginator
+    public function listAccessibleBy(User $user, array $filters = [], int $perPage = 15): LengthAwarePaginator
     {
-        return $this->reservations->paginateAccessibleBy($user, $perPage);
+        return $this->reservations->paginateAccessibleBy($user, $filters, min(max($perPage, 1), 100));
     }
 
     /**

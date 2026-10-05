@@ -70,7 +70,29 @@ final class DummyIdentityDocumentProvider implements IdentityDocumentProviderInt
         'expiry' => '1451/06/01',
     ];
 
+    /**
+     * End-to-end test scenario (Flutter → backend → dashboard): whatever the
+     * guest selects or uploads, the "extraction" is always this fixed
+     * Egyptian National ID. The real evaluator then compares it with the
+     * guest's claim (number, name, selected type). Its result is flagged
+     * {@see DocumentExtractionResult::$testFixture}, which lets the check
+     * verify it automatically outside production (the Egyptian type is
+     * otherwise manual-review only).
+     */
+    public const SCENARIO_EGYPTIAN_ID_FIXTURE = 'egyptian_id_fixture';
+
+    /** The fixture's identity — what a tester types to pass. Synthetic. */
+    public const EGYPTIAN_ID_FIXTURE = [
+        'first_name' => 'سامي',
+        'family_names' => 'عادل فؤاد منصور',
+        'national_id' => '29001150112357',
+        'expiry' => '2031-01-01',
+        'gender' => 'male',
+        'country' => 'EGY',
+    ];
+
     public const SCENARIOS = [
+        self::SCENARIO_EGYPTIAN_ID_FIXTURE, // fixed Egyptian ID for E2E testing, see above
         'specimen_passport',   // valid passport with a valid MRZ
         'expired_passport',    // valid MRZ, expired 2020-04-15
         'bad_mrz_passport',    // MRZ with a broken check digit
@@ -110,6 +132,22 @@ final class DummyIdentityDocumentProvider implements IdentityDocumentProviderInt
 
         if ($this->fixed !== null) {
             return DocumentExtractionResult::extracted($this->fixed, 'succeeded', $artifact);
+        }
+
+        if ($this->scenario === self::SCENARIO_EGYPTIAN_ID_FIXTURE) {
+            // No image is read: the uploaded bytes never influence the result.
+            $f = self::EGYPTIAN_ID_FIXTURE;
+
+            return DocumentExtractionResult::testFixture(new ExtractedIdentityDocument(
+                kind: ExtractedIdentityDocument::KIND_NATIONAL_ID,
+                givenNames: $f['first_name'],
+                surname: $f['family_names'],
+                documentNumber: $f['national_id'],
+                dateOfExpiry: $f['expiry'],
+                issuingCountry: $f['country'],
+                confidence: ['name' => 0.99, 'document_number' => 0.99, 'birth' => null, 'expiry' => 0.99],
+                gender: $f['gender'],
+            ), $artifact);
         }
 
         $s = self::SPECIMEN;

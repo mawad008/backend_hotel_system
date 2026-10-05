@@ -77,7 +77,13 @@ class IdentityDocumentCheckService
             fn (string $ref) => ! $this->safeDelete($ref),
         ));
 
-        $outcome = $this->evaluator()->evaluate($extraction, $claim, $validOn, $type, $settings->autoVerify);
+        // The dummy E2E fixture may verify a type that is otherwise manual-
+        // review only — never in production (the dummy is also refused there
+        // by the container binding; this is the second guard).
+        $autoVerify = $settings->autoVerify
+            || ($extraction->testFixture && ! app()->environment('production'));
+
+        $outcome = $this->evaluator()->evaluate($extraction, $claim, $validOn, $type, $autoVerify);
         $durationMs = (int) ((hrtime(true) - $started) / 1_000_000);
 
         $context = [

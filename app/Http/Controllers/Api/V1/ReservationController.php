@@ -13,6 +13,7 @@ use App\Domain\StayServices\Services\FolioService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Reservation\ExtendReservationRequest;
 use App\Http\Requests\Api\V1\Reservation\IndexFrontDeskRequest;
+use App\Http\Requests\Api\V1\Reservation\IndexReservationRequest;
 use App\Http\Requests\Api\V1\Reservation\StoreReservationRequest;
 use App\Http\Requests\Api\V1\Reservation\TransitionReservationRequest;
 use App\Http\Resources\V1\FolioResource;
@@ -39,12 +40,12 @@ class ReservationController extends Controller
      * authenticated user's own hotel access — a client cannot widen this
      * by passing any request parameter.
      */
-    public function index(Request $request): JsonResponse
+    public function index(IndexReservationRequest $request): JsonResponse
     {
         $this->authorize('viewAny', Reservation::class);
 
         return $this->success(ReservationResource::collection(
-            $this->reservations->listAccessibleBy($request->user())
+            $this->reservations->listAccessibleBy($request->user(), $request->filters(), $request->perPage())
         ));
     }
 

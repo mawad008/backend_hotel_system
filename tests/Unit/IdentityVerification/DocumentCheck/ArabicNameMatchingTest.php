@@ -48,6 +48,34 @@ class ArabicNameMatchingTest extends TestCase
         $this->assertSame($expected, M::compare($claimed, $given, $family)['result']);
     }
 
+    /** @return array<string, array{string, string}> claimed, expected — card: سامي / عادل فؤاد منصور */
+    public static function egyptianCases(): array
+    {
+        return [
+            'full name' => ['سامي عادل فؤاد منصور', M::RESULT_STRONG],
+            'triple name (last token omitted)' => ['سامي عادل فؤاد', M::RESULT_STRONG],
+            'first + last' => ['سامي منصور', M::RESULT_STRONG],
+            'first + father only' => ['سامي عادل', M::RESULT_WEAK],
+            'out of order' => ['سامي فؤاد عادل', M::RESULT_WEAK],
+            'first name missing' => ['عادل فؤاد منصور', M::RESULT_WEAK],
+            'different family' => ['سامي عادل فؤاد الشريف', M::RESULT_MISMATCH],
+            'different father' => ['سامي خالد فؤاد', M::RESULT_MISMATCH],
+            'first name only' => ['سامي', M::RESULT_MISMATCH],
+        ];
+    }
+
+    #[DataProvider('egyptianCases')]
+    public function test_egyptian_lineage_names(string $claimed, string $expected): void
+    {
+        $this->assertSame($expected, M::compare($claimed, 'سامي', 'عادل فؤاد منصور', patronymic: true)['result']);
+    }
+
+    public function test_a_name_made_only_of_printed_tokens_is_never_a_hard_mismatch(): void
+    {
+        // Without the Egyptian rule the triple name is reviewed, not rejected.
+        $this->assertSame(M::RESULT_WEAK, M::compare('سامي عادل فؤاد', 'سامي', 'عادل فؤاد منصور')['result']);
+    }
+
     public function test_close_but_different_names_never_reach_strong(): void
     {
         foreach ([['محمود', 'محمد'], ['حامد', 'احمد'], ['سمير', 'سامي'], ['علا', 'علي']] as [$a, $b]) {

@@ -40,9 +40,11 @@ interface ReservationRepositoryInterface
      * hotel_id. Not nested under a single Hotel, unlike Phase 2's
      * Room/RoomType listings: a Reservation route has not been designed
      * yet (Phase 3C), so this returns everything the user may see across
-     * all their accessible hotels.
+     * all their accessible hotels. Newest first.
+     *
+     * @param  array{search?: string|null, status?: string|null, hotel_id?: int|null, check_in_from?: string|null, check_in_to?: string|null}  $filters
      */
-    public function paginateAccessibleBy(User $user, int $perPage = 15): LengthAwarePaginator;
+    public function paginateAccessibleBy(User $user, array $filters = [], int $perPage = 15): LengthAwarePaginator;
 
     /**
      * Lookup by id, scoped to $user's own hotel access — returns null both

@@ -216,7 +216,13 @@ final class DocumentCheckEvaluator
         if ($claim->fullName === null || trim($claim->fullName) === '') {
             $fields['name'] = 'not_provided';
         } else {
-            ['result' => $nameResult, 'score' => $nameScore] = NameMatcher::compare($claim->fullName, $given, $surname, $truncated);
+            ['result' => $nameResult, 'score' => $nameScore] = NameMatcher::compare(
+                $claim->fullName,
+                $given,
+                $surname,
+                $truncated,
+                patronymic: $type === IdentityDocumentType::EgyptianNationalId,
+            );
 
             // A card printing the name in both scripts: compare with the one
             // in the guest's script — never a transliteration.

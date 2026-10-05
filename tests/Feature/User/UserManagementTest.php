@@ -55,6 +55,20 @@ class UserManagementTest extends TestCase
         $this->assertTrue($manager->hotels()->whereKey($hotelB->id)->exists());
     }
 
+    public function test_user_list_includes_each_users_assigned_hotels(): void
+    {
+        $owner = User::factory()->groupOwner()->create();
+        $hotel = Hotel::factory()->create();
+        $manager = User::factory()->hotelManager()->create();
+        $manager->hotels()->attach($hotel);
+
+        $response = $this->actingAs($owner, 'sanctum')->getJson('/api/v1/users');
+
+        $response->assertOk();
+        $row = collect($response->json('data'))->firstWhere('id', $manager->id);
+        $this->assertSame([$hotel->id], collect($row['hotels'])->pluck('id')->all());
+    }
+
     public function test_group_owner_can_delete_a_user(): void
     {
         $owner = User::factory()->groupOwner()->create();

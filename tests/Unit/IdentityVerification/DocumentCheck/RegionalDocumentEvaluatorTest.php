@@ -96,6 +96,17 @@ class RegionalDocumentEvaluatorTest extends TestCase
         $this->assertSame(['manual_review_required_for_document_type'], $gated->reasons);
     }
 
+    public function test_egypt_triple_name_without_the_last_card_token_is_not_a_mismatch(): void
+    {
+        $triple = $this->eval($this->egypt(), $this->egyptClaim(['name' => 'سامي عادل فؤاد']), T::EgyptianNationalId, auto: true);
+        $this->assertSame(S::Verified, $triple->status);
+        $this->assertSame('strong', $triple->fields['name']);
+
+        $pair = $this->eval($this->egypt(), $this->egyptClaim(['name' => 'سامي عادل']), T::EgyptianNationalId, auto: true);
+        $this->assertSame(S::NeedsReview, $pair->status);
+        $this->assertContains('name_weak_match', $pair->reasons);
+    }
+
     public function test_egypt_birth_date_is_derived_from_the_number(): void
     {
         $out = $this->eval($this->egypt(), $this->egyptClaim(['dob' => '1990-01-16']), T::EgyptianNationalId);
