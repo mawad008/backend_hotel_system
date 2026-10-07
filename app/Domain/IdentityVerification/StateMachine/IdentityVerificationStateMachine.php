@@ -22,6 +22,9 @@ use App\Domain\IdentityVerification\Models\IdentityVerificationSession;
  *
  *   NOT_STARTED           -> DOCUMENT_UPLOADED
  *   DOCUMENT_UPLOADED     -> SELFIE_CAPTURED
+ *                          | AUTO_APPROVED (document-only mode: the ID photo
+ *                            alone completes verification — no OCR, no selfie;
+ *                            config('verification.document_only'))
  *   SELFIE_CAPTURED       -> MATCHING_IN_PROGRESS
  *   MATCHING_IN_PROGRESS  -> AUTO_APPROVED | PENDING_MANUAL_REVIEW | RETRY_ALLOWED
  *   RETRY_ALLOWED         -> DOCUMENT_UPLOADED (new attempt)
@@ -55,6 +58,7 @@ final class IdentityVerificationStateMachine
         ],
         IdentityVerificationSession::STATUS_DOCUMENT_UPLOADED => [
             IdentityVerificationSession::STATUS_SELFIE_CAPTURED,
+            IdentityVerificationSession::STATUS_AUTO_APPROVED,
         ],
         IdentityVerificationSession::STATUS_SELFIE_CAPTURED => [
             IdentityVerificationSession::STATUS_MATCHING_IN_PROGRESS,

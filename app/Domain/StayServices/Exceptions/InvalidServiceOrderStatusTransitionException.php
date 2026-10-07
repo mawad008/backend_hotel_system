@@ -2,6 +2,7 @@
 
 namespace App\Domain\StayServices\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -16,7 +17,7 @@ class InvalidServiceOrderStatusTransitionException extends RuntimeException
         public readonly string $toStatus,
     ) {
         parent::__construct(
-            "Cannot transition a service order from '{$fromStatus}' to '{$toStatus}'."
+            ErrorText::message('service_order_status_transition', ['from' => ErrorText::status($fromStatus), 'to' => ErrorText::status($toStatus)])
         );
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Domain\IdentityVerification\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -17,6 +18,6 @@ class InvalidIdentityVerificationStatusTransitionException extends RuntimeExcept
         public readonly string $from,
         public readonly string $to,
     ) {
-        parent::__construct("Cannot transition an identity verification from '{$from}' to '{$to}'.");
+        parent::__construct(ErrorText::message('identity_status_transition', ['from' => ErrorText::status($from), 'to' => ErrorText::status($to)]));
     }
 }

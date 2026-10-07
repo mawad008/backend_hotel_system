@@ -2,6 +2,7 @@
 
 namespace App\Domain\DigitalAccess\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -16,7 +17,7 @@ class DigitalAccessActionNotAllowedException extends RuntimeException
         public readonly string $currentStatus,
     ) {
         parent::__construct(
-            "Cannot '{$action}' digital access while it is '{$currentStatus}'."
+            ErrorText::message('digital_access_action_not_allowed', ['action' => ErrorText::action($action), 'status' => ErrorText::status($currentStatus)])
         );
     }
 }

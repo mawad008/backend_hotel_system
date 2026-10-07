@@ -2,6 +2,7 @@
 
 namespace App\Domain\Review\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -13,7 +14,7 @@ class ReviewNotAllowedException extends RuntimeException
 {
     public function __construct(public readonly string $reason)
     {
-        parent::__construct("This review action is not allowed ({$reason}).");
+        parent::__construct(ErrorText::message('review_not_allowed', ['reason' => ErrorText::reason($reason)]));
     }
 
     public static function reservationNotCompleted(string $status): self

@@ -2,6 +2,7 @@
 
 namespace App\Domain\IdentityVerification\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -14,7 +15,7 @@ class IdentityVerificationRetryNotAllowedException extends RuntimeException
     public function __construct(public readonly string $currentStatus)
     {
         parent::__construct(
-            'The identity verification retry limit has been reached; a manual review decision is required.'
+            ErrorText::message('identity_retry_limit')
         );
     }
 }

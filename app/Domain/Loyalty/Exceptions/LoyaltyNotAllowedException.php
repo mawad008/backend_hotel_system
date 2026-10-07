@@ -2,6 +2,7 @@
 
 namespace App\Domain\Loyalty\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -13,7 +14,7 @@ class LoyaltyNotAllowedException extends RuntimeException
 {
     public function __construct(public readonly string $reason)
     {
-        parent::__construct("This loyalty operation is not allowed ({$reason}).");
+        parent::__construct(ErrorText::message('loyalty_not_allowed', ['reason' => ErrorText::reason($reason)]));
     }
 
     public static function programInactive(): self

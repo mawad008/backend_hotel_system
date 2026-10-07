@@ -1,0 +1,52 @@
+<?php
+
+/*
+ * Messages of domain exceptions returned to API clients — see
+ * App\Support\ErrorText. English strings are the exact historical messages
+ * (raw status/reason codes are interpolated as-is).
+ */
+return [
+    'room_type_hotel_mismatch' => 'The selected room type does not belong to this hotel.',
+    'room_status_transition' => 'Cannot transition a room from \':from\' to \':to\'.',
+    'room_hotel_mismatch' => 'The selected room does not belong to this hotel.',
+    'room_type_mismatch' => 'The selected room does not belong to the selected room type.',
+    'reservation_not_available' => 'The requested dates are not available.',
+    'reservation_status_transition' => 'Cannot transition a reservation from \':from\' to \':to\'.',
+    'room_assignment_not_allowed' => 'A room cannot be assigned while the reservation is \':status\'.',
+    'extension_not_allowed' => 'A stay extension cannot be requested while the reservation is \':status\'.',
+    'extension_idempotency_conflict' => 'This idempotency key has already been used for a different stay extension (:reason).',
+    'payment_hold_not_allowed' => 'A payment hold cannot be initiated while the reservation is \':status\'.',
+    'payment_already_initiated' => 'A payment hold has already been initiated for this reservation (payment is \':status\').',
+    'payment_idempotency_conflict' => 'This idempotency key has already been used for a different payment operation (:reason).',
+    'payment_amount_invalid' => 'The payment amount is invalid (:reason).',
+    'payment_currency_invalid' => 'The payment currency \':currency\' is not a valid ISO-4217 code.',
+    'payment_status_transition' => 'Cannot transition a payment from \':from\' to \':to\'.',
+    'identity_not_allowed' => 'Identity verification cannot be started while the reservation is \':status\'.',
+    'identity_action_not_allowed' => 'Cannot \':action\' an identity verification while it is \':status\'.',
+    'identity_retry_limit' => 'The identity verification retry limit has been reached; a manual review decision is required.',
+    'identity_config_missing' => 'A required identity verification configuration value is not set: \':key\'.',
+    'identity_idempotency_conflict' => 'The identity verification idempotency key was already used for a :reason.',
+    'identity_status_transition' => 'Cannot transition an identity verification from \':from\' to \':to\'.',
+    'check_in_not_allowed' => 'Check-in cannot proceed while the reservation is \':status\'.',
+    'check_in_not_eligible' => 'Check-in is not currently eligible (:reason).',
+    'digital_access_action_not_allowed' => 'Cannot \':action\' digital access while it is \':status\'.',
+    'digital_access_idempotency_conflict' => 'The digital access idempotency key was already used for a :reason.',
+    'digital_access_status_transition' => 'Cannot transition digital access from \':from\' to \':to\'.',
+    'service_order_not_allowed' => 'A service order cannot be created (:reason).',
+    'service_order_status_transition' => 'Cannot transition a service order from \':from\' to \':to\'.',
+    'folio_charge_amount_invalid' => 'The computed charge amount is invalid (:reason).',
+    'checkout_not_allowed' => 'Checkout is not allowed while the reservation is \':status\'.',
+    'checkout_currency_missing' => 'A final settlement is required but no currency is set on the payment or the folio.',
+    'checkout_status_transition' => 'Cannot transition a checkout from \':from\' to \':to\'.',
+    'invoice_generation_failed' => 'The invoice could not be finalized (:reason).',
+    'payment_settlement_not_allowed' => 'A final settlement is not allowed while the payment is \':status\'.',
+    'loyalty_not_allowed' => 'This loyalty operation is not allowed (:reason).',
+    'loyalty_points_invalid' => 'The points value is invalid (:reason).',
+    'notification_status_transition' => 'Notification delivery cannot transition from :from to :to.',
+    'review_not_allowed' => 'This review action is not allowed (:reason).',
+    'service_review_not_allowed' => 'This service review action is not allowed (:reason).',
+    'problem_report_status_transition' => 'Cannot transition a problem report from [:from] to [:to].',
+    'notification_not_readable' => 'Only in-app notifications can be marked as read.',
+    'notification_recipient_unresolved' => 'The notification recipient could not be resolved.',
+    'notification_race_unresolved' => 'The notification could not be resolved after a write race.',
+];

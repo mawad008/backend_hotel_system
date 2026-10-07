@@ -18,6 +18,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Document-Only Mode
+    |--------------------------------------------------------------------------
+    |
+    | When true, the guest only photographs their ID: the image is stored
+    | (encrypted, private disk) and the session goes straight to
+    | AUTO_APPROVED, which moves the Reservation to VERIFIED. No OCR call,
+    | no typed details (document number / date of birth), no selfie. Staff
+    | can still see the stored document. Set false to restore the OCR +
+    | selfie face-match flow below.
+    |
+    */
+
+    'document_only' => (bool) env('IDENTITY_DOCUMENT_ONLY', true),
+
+    /*
+    |--------------------------------------------------------------------------
     | Confidence Thresholds (Phase 0 §10, R57 — GENUINELY UNRESOLVED)
     |--------------------------------------------------------------------------
     |

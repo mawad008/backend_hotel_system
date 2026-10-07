@@ -2,6 +2,7 @@
 
 namespace App\Domain\Payment\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -15,6 +16,6 @@ class InvalidPaymentAmountException extends RuntimeException
 {
     public function __construct(public readonly string $reason)
     {
-        parent::__construct("The payment amount is invalid ({$reason}).");
+        parent::__construct(ErrorText::message('payment_amount_invalid', ['reason' => $reason]));
     }
 }

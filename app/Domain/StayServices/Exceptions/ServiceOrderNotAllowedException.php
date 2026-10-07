@@ -2,6 +2,7 @@
 
 namespace App\Domain\StayServices\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -14,7 +15,7 @@ class ServiceOrderNotAllowedException extends RuntimeException
 {
     public function __construct(public readonly string $reason)
     {
-        parent::__construct("A service order cannot be created ({$reason}).");
+        parent::__construct(ErrorText::message('service_order_not_allowed', ['reason' => ErrorText::reason($reason)]));
     }
 
     public static function reservationNotServiceable(string $status): self

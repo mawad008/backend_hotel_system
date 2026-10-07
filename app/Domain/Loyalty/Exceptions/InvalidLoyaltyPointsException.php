@@ -2,6 +2,7 @@
 
 namespace App\Domain\Loyalty\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -13,6 +14,6 @@ class InvalidLoyaltyPointsException extends RuntimeException
 {
     public function __construct(public readonly string $reason = 'points_must_be_a_positive_integer')
     {
-        parent::__construct("The points value is invalid ({$reason}).");
+        parent::__construct(ErrorText::message('loyalty_points_invalid', ['reason' => $reason]));
     }
 }

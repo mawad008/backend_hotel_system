@@ -78,6 +78,8 @@ class GuestIdentityVerificationController extends Controller
      */
     public function documentTypes(IdentityDocumentCatalog $catalog): JsonResponse
     {
+        $documentOnly = (bool) config('verification.document_only');
+
         return $this->success(array_map(fn (DocumentTypeSettings $s) => [
             'type' => $s->type->value,
             'country' => $s->type->issuingCountry(),
@@ -85,7 +87,10 @@ class GuestIdentityVerificationController extends Controller
             'date_of_birth_in_number' => $s->type->numberEncodesBirthDate(),
             // False while the route has no model configured / automatic
             // verification is off: the guest is told staff will review it.
-            'automatic_check' => $s->modelConfigured() && $s->autoVerify,
+            'automatic_check' => $documentOnly || ($s->modelConfigured() && $s->autoVerify),
+            // Document-only mode: photograph the ID, nothing to type, no selfie.
+            'details_required' => ! $documentOnly,
+            'selfie_required' => ! $documentOnly,
         ], $catalog->selectable()), __('api.identity_verification.status'));
     }
 

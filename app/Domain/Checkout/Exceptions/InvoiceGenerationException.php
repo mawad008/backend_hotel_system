@@ -2,6 +2,7 @@
 
 namespace App\Domain\Checkout\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -13,6 +14,6 @@ class InvoiceGenerationException extends RuntimeException
 {
     public function __construct(public readonly string $reason = 'invoice_generation_failed')
     {
-        parent::__construct("The invoice could not be finalized ({$reason}).");
+        parent::__construct(ErrorText::message('invoice_generation_failed', ['reason' => $reason]));
     }
 }

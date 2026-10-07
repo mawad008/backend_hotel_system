@@ -2,6 +2,7 @@
 
 namespace App\Domain\Audit\Services;
 
+use App\Domain\Audit\Events\AuditRecorded;
 use App\Domain\Audit\Models\AuditLog;
 use App\Domain\IdentityAccess\Models\User;
 use Illuminate\Database\Eloquent\Model;
@@ -23,7 +24,7 @@ class AuditLogger
         ?array $after = null,
         ?int $hotelId = null,
     ): AuditLog {
-        return AuditLog::create([
+        $log = AuditLog::create([
             'actor_id' => $actor?->id,
             'action' => $action,
             'auditable_type' => $subject?->getMorphClass(),
@@ -34,5 +35,9 @@ class AuditLogger
             'ip_address' => $this->request->ip(),
             'user_agent' => $this->request->userAgent(),
         ]);
+
+        AuditRecorded::dispatch($log, $subject);
+
+        return $log;
     }
 }

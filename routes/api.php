@@ -38,6 +38,7 @@ use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\LoyaltyController;
 use App\Http\Controllers\Api\V1\LoyaltyRuleController;
 use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\StaffNotificationController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PaymentWebhookController;
 use App\Http\Controllers\Api\V1\PermissionController;
@@ -287,6 +288,14 @@ Route::prefix('v1')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout']);
         Route::get('/auth/me', [AuthController::class, 'me']);
+
+        // The signed-in staff user's own dashboard inbox (bell + list).
+        Route::prefix('/me/notifications')->middleware('throttle:notifications.read')->group(function () {
+            Route::get('/', [StaffNotificationController::class, 'index']);
+            Route::get('/unread-count', [StaffNotificationController::class, 'unreadCount']);
+            Route::patch('/{notification}/read', [StaffNotificationController::class, 'markRead'])->whereNumber('notification');
+            Route::post('/read-all', [StaffNotificationController::class, 'markAllRead']);
+        });
 
         Route::get('/roles', [RoleController::class, 'index']);
         Route::post('/roles', [RoleController::class, 'store']);

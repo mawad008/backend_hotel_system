@@ -2,6 +2,7 @@
 
 namespace App\Domain\IdentityVerification\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -17,7 +18,7 @@ class IdentityVerificationConfigurationMissingException extends RuntimeException
     public function __construct(public readonly string $configKey)
     {
         parent::__construct(
-            "A required identity verification configuration value is not set: '{$configKey}'."
+            ErrorText::message('identity_config_missing', ['key' => $configKey])
         );
     }
 }

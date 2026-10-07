@@ -2,6 +2,7 @@
 
 namespace App\Domain\Reservation\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -17,6 +18,6 @@ class InvalidReservationStatusTransitionException extends RuntimeException
         public readonly string $from,
         public readonly string $to,
     ) {
-        parent::__construct("Cannot transition a reservation from '{$from}' to '{$to}'.");
+        parent::__construct(ErrorText::message('reservation_status_transition', ['from' => ErrorText::status($from), 'to' => ErrorText::status($to)]));
     }
 }

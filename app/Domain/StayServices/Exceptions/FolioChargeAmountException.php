@@ -2,6 +2,7 @@
 
 namespace App\Domain\StayServices\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -14,6 +15,6 @@ class FolioChargeAmountException extends RuntimeException
 {
     public function __construct(public readonly string $reason = 'amount_out_of_range')
     {
-        parent::__construct("The computed charge amount is invalid ({$reason}).");
+        parent::__construct(ErrorText::message('folio_charge_amount_invalid', ['reason' => $reason]));
     }
 }

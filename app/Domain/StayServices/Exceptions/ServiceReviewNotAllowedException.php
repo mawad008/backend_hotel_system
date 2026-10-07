@@ -2,6 +2,7 @@
 
 namespace App\Domain\StayServices\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -13,7 +14,7 @@ class ServiceReviewNotAllowedException extends RuntimeException
 {
     public function __construct(public readonly string $reason)
     {
-        parent::__construct("This service review action is not allowed ({$reason}).");
+        parent::__construct(ErrorText::message('service_review_not_allowed', ['reason' => ErrorText::reason($reason)]));
     }
 
     public static function orderNotFulfilled(string $status): self

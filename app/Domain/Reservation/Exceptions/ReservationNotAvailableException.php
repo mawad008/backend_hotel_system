@@ -2,6 +2,7 @@
 
 namespace App\Domain\Reservation\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -14,6 +15,6 @@ class ReservationNotAvailableException extends RuntimeException
 {
     public function __construct()
     {
-        parent::__construct('The requested dates are not available.');
+        parent::__construct(ErrorText::message('reservation_not_available'));
     }
 }

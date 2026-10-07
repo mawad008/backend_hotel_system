@@ -9,13 +9,19 @@ namespace App\Http\Requests\Api\V1\IdentityVerification;
  * Same as the staff request, but the guest MUST state the document number
  * and — unless the document encodes it in the number (Egyptian ID) — the
  * date of birth: without them the OCR result has nothing to be compared
- * against and could never be verified automatically.
+ * against and could never be verified automatically. In document-only mode
+ * (config `verification.document_only`) nothing beyond the images is required.
  */
 class GuestSubmitIdentityDocumentRequest extends SubmitIdentityDocumentRequest
 {
     public function rules(): array
     {
         $rules = parent::rules();
+
+        // Document-only mode: the photo is all that is asked for.
+        if (config('verification.document_only')) {
+            return $rules;
+        }
 
         $rules['document_number'] = self::required($rules['document_number']);
 

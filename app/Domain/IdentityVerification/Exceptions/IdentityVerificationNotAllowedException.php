@@ -2,6 +2,7 @@
 
 namespace App\Domain\IdentityVerification\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -17,7 +18,7 @@ class IdentityVerificationNotAllowedException extends RuntimeException
     public function __construct(public readonly string $reservationStatus)
     {
         parent::__construct(
-            "Identity verification cannot be started while the reservation is '{$reservationStatus}'."
+            ErrorText::message('identity_not_allowed', ['status' => ErrorText::status($reservationStatus)])
         );
     }
 }

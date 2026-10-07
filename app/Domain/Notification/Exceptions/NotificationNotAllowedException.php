@@ -2,6 +2,7 @@
 
 namespace App\Domain\Notification\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -20,16 +21,16 @@ class NotificationNotAllowedException extends RuntimeException
 
     public static function notReadable(): self
     {
-        return new self('Only in-app notifications can be marked as read.');
+        return new self(ErrorText::message('notification_not_readable'));
     }
 
     public static function recipientUnresolved(): self
     {
-        return new self('The notification recipient could not be resolved.');
+        return new self(ErrorText::message('notification_recipient_unresolved'));
     }
 
     public static function deliveryRaceUnresolved(): self
     {
-        return new self('The notification could not be resolved after a write race.');
+        return new self(ErrorText::message('notification_race_unresolved'));
     }
 }

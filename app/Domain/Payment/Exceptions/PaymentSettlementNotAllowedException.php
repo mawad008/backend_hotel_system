@@ -2,6 +2,7 @@
 
 namespace App\Domain\Payment\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -15,7 +16,7 @@ class PaymentSettlementNotAllowedException extends RuntimeException
     public function __construct(public readonly string $currentStatus)
     {
         parent::__construct(
-            "A final settlement is not allowed while the payment is '{$currentStatus}'."
+            ErrorText::message('payment_settlement_not_allowed', ['status' => ErrorText::status($currentStatus)])
         );
     }
 }

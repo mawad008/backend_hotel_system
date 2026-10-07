@@ -3,6 +3,7 @@
 namespace App\Domain\Notification\Exceptions;
 
 use App\Domain\Notification\Enums\NotificationStatus;
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -19,7 +20,7 @@ class InvalidNotificationStatusTransitionException extends RuntimeException
         public readonly string $from,
         public readonly string $to,
     ) {
-        parent::__construct("Notification delivery cannot transition from {$from} to {$to}.");
+        parent::__construct(ErrorText::message('notification_status_transition', ['from' => ErrorText::status($from), 'to' => ErrorText::status($to)]));
     }
 
     public static function between(NotificationStatus $from, NotificationStatus $to): self

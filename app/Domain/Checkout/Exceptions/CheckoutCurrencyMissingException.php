@@ -2,6 +2,7 @@
 
 namespace App\Domain\Checkout\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -18,7 +19,7 @@ class CheckoutCurrencyMissingException extends RuntimeException
     public function __construct()
     {
         parent::__construct(
-            'A final settlement is required but no currency is set on the payment or the folio.'
+            ErrorText::message('checkout_currency_missing')
         );
     }
 }

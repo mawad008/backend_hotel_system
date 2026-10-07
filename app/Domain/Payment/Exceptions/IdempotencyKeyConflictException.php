@@ -2,6 +2,7 @@
 
 namespace App\Domain\Payment\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -17,7 +18,7 @@ class IdempotencyKeyConflictException extends RuntimeException
     public function __construct(public readonly string $reason)
     {
         parent::__construct(
-            "This idempotency key has already been used for a different payment operation ({$reason})."
+            ErrorText::message('payment_idempotency_conflict', ['reason' => $reason])
         );
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Domain\DigitalAccess\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -17,7 +18,7 @@ class CheckInNotAllowedException extends RuntimeException
     public function __construct(public readonly string $reservationStatus)
     {
         parent::__construct(
-            "Check-in cannot proceed while the reservation is '{$reservationStatus}'."
+            ErrorText::message('check_in_not_allowed', ['status' => ErrorText::status($reservationStatus)])
         );
     }
 }

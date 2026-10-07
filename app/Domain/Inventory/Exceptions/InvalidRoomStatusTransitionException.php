@@ -2,6 +2,7 @@
 
 namespace App\Domain\Inventory\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -14,6 +15,6 @@ class InvalidRoomStatusTransitionException extends RuntimeException
 {
     public function __construct(string $from, string $to)
     {
-        parent::__construct("Cannot transition a room from '{$from}' to '{$to}'.");
+        parent::__construct(ErrorText::message('room_status_transition', ['from' => ErrorText::status($from), 'to' => ErrorText::status($to)]));
     }
 }

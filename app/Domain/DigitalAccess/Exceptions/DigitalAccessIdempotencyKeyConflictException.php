@@ -2,6 +2,7 @@
 
 namespace App\Domain\DigitalAccess\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -13,6 +14,6 @@ class DigitalAccessIdempotencyKeyConflictException extends RuntimeException
 {
     public function __construct(public readonly string $reason)
     {
-        parent::__construct("The digital access idempotency key was already used for a {$reason}.");
+        parent::__construct(ErrorText::message('digital_access_idempotency_conflict', ['reason' => $reason]));
     }
 }

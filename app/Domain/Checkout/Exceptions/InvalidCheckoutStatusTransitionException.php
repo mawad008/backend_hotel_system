@@ -2,6 +2,7 @@
 
 namespace App\Domain\Checkout\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -16,7 +17,7 @@ class InvalidCheckoutStatusTransitionException extends RuntimeException
         public readonly string $toStatus,
     ) {
         parent::__construct(
-            "Cannot transition a checkout from '{$fromStatus}' to '{$toStatus}'."
+            ErrorText::message('checkout_status_transition', ['from' => ErrorText::status($fromStatus), 'to' => ErrorText::status($toStatus)])
         );
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Domain\Inventory\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -14,6 +15,6 @@ class RoomTypeHotelMismatchException extends RuntimeException
 {
     public function __construct()
     {
-        parent::__construct('The selected room type does not belong to this hotel.');
+        parent::__construct(ErrorText::message('room_type_hotel_mismatch'));
     }
 }

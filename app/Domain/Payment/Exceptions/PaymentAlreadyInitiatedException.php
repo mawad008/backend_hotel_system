@@ -2,6 +2,7 @@
 
 namespace App\Domain\Payment\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -17,7 +18,7 @@ class PaymentAlreadyInitiatedException extends RuntimeException
     public function __construct(public readonly string $paymentStatus)
     {
         parent::__construct(
-            "A payment hold has already been initiated for this reservation (payment is '{$paymentStatus}')."
+            ErrorText::message('payment_already_initiated', ['status' => ErrorText::status($paymentStatus)])
         );
     }
 }

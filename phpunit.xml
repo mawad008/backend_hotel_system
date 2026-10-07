@@ -35,5 +35,6 @@
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="OTP_SENDER" value="dummy"/>
         <env name="OTP_FIXED_CODE" value="123456"/>
+        <env name="IDENTITY_DOCUMENT_ONLY" value="false"/>
     </php>
 </phpunit>

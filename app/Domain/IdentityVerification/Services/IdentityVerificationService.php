@@ -218,6 +218,13 @@ class IdentityVerificationService
 
         ['attemptId' => $attemptId, 'path' => $path, 'type' => $type] = $stepA['check'];
 
+        // Document-only mode: the stored photo completes the verification.
+        if ($this->documentOnly()) {
+            unset($claim);
+
+            return $this->approveDocumentOnly($stepA['session']->id, $attemptId, $actor);
+        }
+
         // ── STEP B ── OCR, OUTSIDE any DB transaction.
         $today = new DateTimeImmutable('today');
         $checkIn = $stepA['checkIn'] ?? null;
@@ -301,6 +308,83 @@ class IdentityVerificationService
 
             return $session;
         });
+    }
+
+    /**
+     * Document-only mode (config('verification.document_only')): the guest
+     * photographed their ID, nothing else is checked. The session goes
+     * DOCUMENT_UPLOADED -> AUTO_APPROVED and the Reservation to VERIFIED.
+     * No OCR or face-match provider is called.
+     */
+    private function approveDocumentOnly(int $sessionId, int $attemptId, ?User $actor): IdentityVerificationSession
+    {
+        return DB::transaction(function () use ($sessionId, $attemptId, $actor) {
+            $session = $this->sessions->findForUpdate($sessionId);
+
+            if ($session === null) {
+                throw (new ModelNotFoundException)->setModel(IdentityVerificationSession::class, [$sessionId]);
+            }
+
+            $reservation = $this->reservations->findForUpdate($session->reservation_id);
+            $attempt = $this->attempts->findForUpdate($attemptId);
+
+            if ($attempt === null) {
+                throw (new ModelNotFoundException)->setModel(IdentityVerificationAttempt::class, [$attemptId]);
+            }
+
+            // A concurrent request already decided this attempt.
+            if ($attempt->status === IdentityVerificationAttempt::STATUS_COMPLETED
+                || $session->status !== IdentityVerificationSession::STATUS_DOCUMENT_UPLOADED) {
+                return $session;
+            }
+
+            $attempt = $this->attempts->update($attempt, [
+                'status' => IdentityVerificationAttempt::STATUS_COMPLETED,
+                'completed_at' => now(),
+            ]);
+
+            IdentityVerificationStateMachine::assertCanTransition(
+                $session->status,
+                IdentityVerificationSession::STATUS_AUTO_APPROVED,
+            );
+
+            $session = $this->sessions->update($session, [
+                'status' => IdentityVerificationSession::STATUS_AUTO_APPROVED,
+                'attempts' => $session->attempts + 1,
+                'decided_at' => now(),
+            ]);
+
+            $this->decisions->create([
+                'session_id' => $session->id,
+                'attempt_id' => $attempt->id,
+                'type' => IdentityVerificationDecision::TYPE_AUTOMATED,
+                'result' => IdentityVerificationDecision::RESULT_AUTO_APPROVED,
+                'decided_by_user_id' => null,
+                'score' => null,
+                'band' => null,
+                'reason' => 'document_only',
+            ]);
+
+            $this->auditLogger->record(
+                $actor,
+                $this->automatedAuditAction(IdentityVerificationSession::STATUS_AUTO_APPROVED),
+                $session,
+                after: $this->auditSnapshot($session, $attempt) + [
+                    'decision_result' => IdentityVerificationDecision::RESULT_AUTO_APPROVED,
+                    'config_note' => 'document_only',
+                ],
+                hotelId: $session->hotel_id,
+            );
+
+            $this->applyReservationVerified($reservation, $session, $actor);
+
+            return $session;
+        });
+    }
+
+    private function documentOnly(): bool
+    {
+        return (bool) config('verification.document_only', false);
     }
 
     // ═════════════════════════════════════════════════════════════════════
@@ -705,8 +789,8 @@ class IdentityVerificationService
         $attempt = $this->attempts->update($attempt, [
             'document_path' => $documentPath,
             'document_back_path' => $backPath,
-            'document_check_status' => DocumentCheckStatus::Processing->value,
-            'document_check_provider' => $this->documentChecks->providerName(),
+            'document_check_status' => $this->documentOnly() ? null : DocumentCheckStatus::Processing->value,
+            'document_check_provider' => $this->documentOnly() ? null : $this->documentChecks->providerName(),
             'document_fingerprint' => $fingerprint,
             'document_uploads' => 1,
         ]);
@@ -783,9 +867,9 @@ class IdentityVerificationService
             'document_path' => $documentPath,
             'document_back_path' => $backPath,
             'document_type' => $documentType ?? $attempt->document_type,
-            'document_check_status' => DocumentCheckStatus::Processing->value,
+            'document_check_status' => $this->documentOnly() ? null : DocumentCheckStatus::Processing->value,
             'document_check' => null,
-            'document_check_provider' => $this->documentChecks->providerName(),
+            'document_check_provider' => $this->documentOnly() ? null : $this->documentChecks->providerName(),
             'document_fingerprint' => $fingerprint,
             'document_uploads' => min(255, $attempt->document_uploads + 1),
         ]);

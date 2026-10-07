@@ -2,13 +2,20 @@
 
 namespace App\Providers;
 
+use App\Domain\Audit\Events\AuditRecorded;
+use App\Domain\Notification\Listeners\NotifyStaffOfOperationalEvent;
 use App\Domain\Notification\Listeners\SendReservationLifecycleNotifications;
+use App\Domain\Notification\Models\StaffNotification;
+use App\Domain\Notification\Policies\StaffNotificationPolicy;
 use App\Domain\Notification\Provider\Contracts\NotificationProviderInterface;
 use App\Domain\Notification\Provider\DummyNotificationProvider;
 use App\Domain\Notification\Provider\Exceptions\UnsupportedNotificationProviderException;
 use App\Domain\Notification\Provider\SimulationDirective;
+use App\Domain\Notification\Repositories\Contracts\StaffNotificationRepositoryInterface;
+use App\Domain\Notification\Repositories\EloquentStaffNotificationRepository;
 use App\Domain\Reservation\Events\ReservationStatusChanged;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -28,6 +35,8 @@ class NotificationServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->bind(StaffNotificationRepositoryInterface::class, EloquentStaffNotificationRepository::class);
+
         $this->app->singleton(NotificationProviderInterface::class, function (): NotificationProviderInterface {
             $provider = (string) config('notifications.provider');
 
@@ -45,5 +54,10 @@ class NotificationServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Event::listen(ReservationStatusChanged::class, SendReservationLifecycleNotifications::class);
+
+        // Dashboard staff inbox — fed by the audit trail every domain
+        // already writes (see StaffNotificationType for the allow-list).
+        Event::listen(AuditRecorded::class, NotifyStaffOfOperationalEvent::class);
+        Gate::policy(StaffNotification::class, StaffNotificationPolicy::class);
     }
 }

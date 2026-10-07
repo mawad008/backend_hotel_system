@@ -2,6 +2,7 @@
 
 namespace App\Domain\DigitalAccess\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -17,7 +18,7 @@ class CheckInEligibilityException extends RuntimeException
 {
     public function __construct(public readonly string $reason)
     {
-        parent::__construct("Check-in is not currently eligible ({$reason}).");
+        parent::__construct(ErrorText::message('check_in_not_eligible', ['reason' => ErrorText::reason($reason)]));
     }
 
     public static function paymentNotConfirmed(): self

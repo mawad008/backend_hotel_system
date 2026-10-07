@@ -2,6 +2,7 @@
 
 namespace App\Domain\DigitalAccess\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -16,6 +17,6 @@ class InvalidDigitalAccessStatusTransitionException extends RuntimeException
         public readonly string $from,
         public readonly string $to,
     ) {
-        parent::__construct("Cannot transition digital access from '{$from}' to '{$to}'.");
+        parent::__construct(ErrorText::message('digital_access_status_transition', ['from' => ErrorText::status($from), 'to' => ErrorText::status($to)]));
     }
 }

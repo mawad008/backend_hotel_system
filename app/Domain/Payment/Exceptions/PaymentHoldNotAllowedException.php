@@ -2,6 +2,7 @@
 
 namespace App\Domain\Payment\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -16,7 +17,7 @@ class PaymentHoldNotAllowedException extends RuntimeException
     public function __construct(public readonly string $reservationStatus)
     {
         parent::__construct(
-            "A payment hold cannot be initiated while the reservation is '{$reservationStatus}'."
+            ErrorText::message('payment_hold_not_allowed', ['status' => ErrorText::status($reservationStatus)])
         );
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Domain\IdentityVerification\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -17,7 +18,7 @@ class IdentityVerificationActionNotAllowedException extends RuntimeException
         public readonly string $currentStatus,
     ) {
         parent::__construct(
-            "Cannot '{$action}' an identity verification while it is '{$currentStatus}'."
+            ErrorText::message('identity_action_not_allowed', ['action' => ErrorText::action($action), 'status' => ErrorText::status($currentStatus)])
         );
     }
 }

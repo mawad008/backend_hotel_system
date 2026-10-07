@@ -2,6 +2,7 @@
 
 namespace App\Domain\Reservation\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -15,7 +16,7 @@ class ReservationRoomAssignmentNotAllowedException extends RuntimeException
     public function __construct(public readonly string $reservationStatus)
     {
         parent::__construct(
-            "A room cannot be assigned while the reservation is '{$reservationStatus}'."
+            ErrorText::message('room_assignment_not_allowed', ['status' => ErrorText::status($reservationStatus)])
         );
     }
 }

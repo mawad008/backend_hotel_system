@@ -25,7 +25,7 @@ class IdentityVerificationStateMachineTest extends TestCase
     {
         return [
             'not_started' => ['document_uploaded'],
-            'document_uploaded' => ['selfie_captured'],
+            'document_uploaded' => ['selfie_captured', 'auto_approved'],
             'selfie_captured' => ['matching_in_progress'],
             'matching_in_progress' => ['auto_approved', 'pending_manual_review', 'retry_allowed'],
             'retry_allowed' => ['document_uploaded', 'pending_manual_review'],
@@ -44,6 +44,7 @@ class IdentityVerificationStateMachineTest extends TestCase
         return [
             'NOT_STARTED -> DOCUMENT_UPLOADED' => ['not_started', 'document_uploaded'],
             'DOCUMENT_UPLOADED -> SELFIE_CAPTURED' => ['document_uploaded', 'selfie_captured'],
+            'DOCUMENT_UPLOADED -> AUTO_APPROVED (document-only)' => ['document_uploaded', 'auto_approved'],
             'SELFIE_CAPTURED -> MATCHING_IN_PROGRESS' => ['selfie_captured', 'matching_in_progress'],
             'MATCHING_IN_PROGRESS -> AUTO_APPROVED' => ['matching_in_progress', 'auto_approved'],
             'MATCHING_IN_PROGRESS -> PENDING_MANUAL_REVIEW' => ['matching_in_progress', 'pending_manual_review'],

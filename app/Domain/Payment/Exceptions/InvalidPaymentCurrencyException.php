@@ -2,6 +2,7 @@
 
 namespace App\Domain\Payment\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -15,6 +16,6 @@ class InvalidPaymentCurrencyException extends RuntimeException
 {
     public function __construct(public readonly string $currency)
     {
-        parent::__construct("The payment currency '{$currency}' is not a valid ISO-4217 code.");
+        parent::__construct(ErrorText::message('payment_currency_invalid', ['currency' => $currency]));
     }
 }

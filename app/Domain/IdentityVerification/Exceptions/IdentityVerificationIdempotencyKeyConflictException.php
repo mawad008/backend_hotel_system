@@ -2,6 +2,7 @@
 
 namespace App\Domain\IdentityVerification\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -13,6 +14,6 @@ class IdentityVerificationIdempotencyKeyConflictException extends RuntimeExcepti
 {
     public function __construct(public readonly string $reason)
     {
-        parent::__construct("The identity verification idempotency key was already used for a {$reason}.");
+        parent::__construct(ErrorText::message('identity_idempotency_conflict', ['reason' => $reason]));
     }
 }

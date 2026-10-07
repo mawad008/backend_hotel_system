@@ -2,6 +2,7 @@
 
 namespace App\Domain\Checkout\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -15,7 +16,7 @@ class CheckoutNotAllowedException extends RuntimeException
     public function __construct(public readonly string $currentStatus)
     {
         parent::__construct(
-            "Checkout is not allowed while the reservation is '{$currentStatus}'."
+            ErrorText::message('checkout_not_allowed', ['status' => ErrorText::status($currentStatus)])
         );
     }
 }

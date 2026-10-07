@@ -2,6 +2,7 @@
 
 namespace App\Domain\Payment\Exceptions;
 
+use App\Support\ErrorText;
 use RuntimeException;
 
 /**
@@ -17,6 +18,6 @@ class InvalidPaymentStatusTransitionException extends RuntimeException
         public readonly string $from,
         public readonly string $to,
     ) {
-        parent::__construct("Cannot transition a payment from '{$from}' to '{$to}'.");
+        parent::__construct(ErrorText::message('payment_status_transition', ['from' => ErrorText::status($from), 'to' => ErrorText::status($to)]));
     }
 }
