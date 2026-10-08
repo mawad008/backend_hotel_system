@@ -47,4 +47,10 @@ class CheckInEligibilityException extends RuntimeException
     {
         return new self('room_not_assigned');
     }
+
+    /** A cancellation is releasing the deposit hold right now. */
+    public static function cancellationInProgress(): self
+    {
+        return new self('cancellation_in_progress');
+    }
 }

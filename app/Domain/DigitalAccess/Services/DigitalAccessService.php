@@ -21,7 +21,9 @@ use App\Domain\IdentityAccess\Models\User;
 use App\Domain\IdentityVerification\Models\IdentityVerificationSession;
 use App\Domain\IdentityVerification\Repositories\Contracts\IdentityVerificationSessionRepositoryInterface;
 use App\Domain\Payment\Models\Payment;
+use App\Domain\Payment\Models\PaymentTransaction;
 use App\Domain\Payment\Repositories\Contracts\PaymentRepositoryInterface;
+use App\Domain\Payment\Repositories\Contracts\PaymentTransactionRepositoryInterface;
 use App\Domain\Reservation\Models\Reservation;
 use App\Domain\Reservation\Repositories\Contracts\ReservationRepositoryInterface;
 use App\Domain\Reservation\Services\ReservationService;
@@ -72,6 +74,7 @@ class DigitalAccessService
         private readonly AccessGrantRepositoryInterface $grants,
         private readonly ReservationRepositoryInterface $reservations,
         private readonly PaymentRepositoryInterface $payments,
+        private readonly PaymentTransactionRepositoryInterface $paymentTransactions,
         private readonly IdentityVerificationSessionRepositoryInterface $identitySessions,
         private readonly ReservationService $reservationService,
         private readonly AuditLogger $auditLogger,
@@ -626,6 +629,14 @@ class DigitalAccessService
 
         if ($depositRequired && ($payment === null || $payment->status !== Payment::STATUS_HOLD_ACTIVE)) {
             throw CheckInEligibilityException::paymentNotConfirmed();
+        }
+
+        // A cancellation is releasing this deposit at the provider right now
+        // (its pending CANCEL_HOLD was opened under the reservation lock).
+        if ($payment !== null && $this->paymentTransactions->hasPendingOfTypeSince(
+            $payment->id, PaymentTransaction::TYPE_CANCEL_HOLD, now()->subMinutes(2),
+        )) {
+            throw CheckInEligibilityException::cancellationInProgress();
         }
 
         $identity = $this->identitySessions->findByReservation($reservation->id);

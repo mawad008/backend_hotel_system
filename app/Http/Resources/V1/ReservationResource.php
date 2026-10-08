@@ -22,7 +22,13 @@ class ReservationResource extends JsonResource
             'guest_id' => $this->guest_id,
             'check_in' => $this->check_in,
             'check_out' => $this->check_out,
+            // Early departure: when the guest left, and the booked dates/price
+            // the stay was shortened from (null when it ran its full length).
+            'checked_out_at' => $this->checked_out_at,
+            'original_check_out' => $this->original_check_out,
+            'original_price_snapshot' => $this->original_price_snapshot,
             'status' => $this->status,
+            'completion_deadline_at' => $this->completion_deadline_at?->toIso8601String(),
             'price_snapshot' => $this->price_snapshot,
             // The booking service fee (snapshotted) and what the guest pays in all.
             'service_fee_amount' => $this->service_fee_amount ?? '0.00',

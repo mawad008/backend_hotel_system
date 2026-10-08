@@ -14,6 +14,7 @@ return [
     'reservation_status_transition' => 'Cannot transition a reservation from \':from\' to \':to\'.',
     'room_assignment_not_allowed' => 'A room cannot be assigned while the reservation is \':status\'.',
     'extension_not_allowed' => 'A stay extension cannot be requested while the reservation is \':status\'.',
+    'reservation_idempotency_conflict' => 'This idempotency key has already been used for a different booking (:reason).',
     'extension_idempotency_conflict' => 'This idempotency key has already been used for a different stay extension (:reason).',
     'payment_hold_not_allowed' => 'A payment hold cannot be initiated while the reservation is \':status\'.',
     'payment_already_initiated' => 'A payment hold has already been initiated for this reservation (payment is \':status\').',

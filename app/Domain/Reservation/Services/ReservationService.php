@@ -9,6 +9,7 @@ use App\Domain\Inventory\Models\RoomType;
 use App\Domain\Inventory\Repositories\Contracts\RoomRepositoryInterface;
 use App\Domain\Inventory\Repositories\Contracts\RoomTypeRepositoryInterface;
 use App\Domain\Reservation\Events\ReservationStatusChanged;
+use App\Domain\Reservation\Exceptions\ReservationIdempotencyKeyConflictException;
 use App\Domain\Reservation\Exceptions\ReservationNotAvailableException;
 use App\Domain\Reservation\Exceptions\ReservationRoomAssignmentNotAllowedException;
 use App\Domain\Reservation\Exceptions\RoomHotelMismatchException;
@@ -21,6 +22,7 @@ use App\Domain\Reservation\StateMachine\ReservationStateMachine;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -149,11 +151,42 @@ class ReservationService
      */
     public function create(array $data, ?User $actor): Reservation
     {
-        return DB::transaction(function () use ($data, $actor) {
+        $key = $data['idempotency_key'] ?? null;
+
+        try {
+            return $this->createLocked($data, $actor, $key);
+        } catch (UniqueConstraintViolationException $e) {
+            // Two identical requests raced past the replay check: the unique
+            // (guest_id, idempotency_key) index let exactly one through.
+            $existing = $key !== null ? $this->reservations->findByGuestAndIdempotencyKey((int) $data['guest_id'], $key) : null;
+
+            if ($existing === null) {
+                throw $e;
+            }
+
+            return $this->replay($existing, $data);
+        }
+    }
+
+    /** @param  array<string, mixed>  $data */
+    private function createLocked(array $data, ?User $actor, ?string $key): Reservation
+    {
+        return DB::transaction(function () use ($data, $actor, $key) {
             $roomType = $this->roomTypes->findForUpdate((int) ($data['room_type_id'] ?? 0));
 
             if (! $roomType) {
                 throw (new ModelNotFoundException)->setModel(RoomType::class, [$data['room_type_id'] ?? null]);
+            }
+
+            // A retried / double-tapped Confirm with the same key returns the
+            // booking already made — read after the room-type lock, so the
+            // first request's row is visible once it has committed.
+            if ($key !== null) {
+                $existing = $this->reservations->findByGuestAndIdempotencyKey((int) ($data['guest_id'] ?? 0), $key);
+
+                if ($existing !== null) {
+                    return $this->replay($existing, $data);
+                }
             }
 
             $hotelId = $roomType->hotel_id;
@@ -205,6 +238,7 @@ class ReservationService
             $data['room_id'] = $room?->id;
             $data['guest_id'] = $guest->id;
             $data['status'] = Reservation::STATUS_PENDING;
+            $data['completion_deadline_at'] = self::completionDeadline();
             // base_price is the room type's NIGHTLY rate (the discovery
             // quote's `estimated_total` and ReservationExtensionService both
             // price nights × base_price); price_snapshot is the stay's total
@@ -260,11 +294,11 @@ class ReservationService
      * @throws InvalidReservationStatusTransitionException if $currentStatus
      *                                                     → $targetStatus is not an approved transition.
      */
-    public function transitionTo(Reservation $reservation, string $targetStatus, ?User $actor = null): Reservation
+    public function transitionTo(Reservation $reservation, string $targetStatus, ?User $actor = null, ?callable $guard = null): Reservation
     {
         $fromStatus = null;
 
-        $transitioned = DB::transaction(function () use ($reservation, $targetStatus, $actor, &$fromStatus) {
+        $transitioned = DB::transaction(function () use ($reservation, $targetStatus, $actor, $guard, &$fromStatus) {
             $current = $this->reservations->findForUpdate($reservation->id);
 
             if (! $current) {
@@ -273,11 +307,22 @@ class ReservationService
 
             $fromStatus = $current->status;
 
+            // Caller's business precondition, evaluated on the locked row so
+            // nothing can change the reservation between check and write.
+            if ($guard !== null) {
+                $guard($current);
+            }
+
             ReservationStateMachine::assertCanTransition($fromStatus, $targetStatus);
 
             $before = $current->toArray();
 
-            $current = $this->reservations->update($current, ['status' => $targetStatus]);
+            $current = $this->reservations->update($current, [
+                'status' => $targetStatus,
+                // A held deposit restarts the completion window (now for
+                // identity); every later state is past the abandonment risk.
+                'completion_deadline_at' => $targetStatus === Reservation::STATUS_DEPOSIT_HELD ? self::completionDeadline() : null,
+            ]);
 
             $this->auditLogger->record(
                 $actor,
@@ -305,6 +350,37 @@ class ReservationService
      * Reservation statuses in which staff may assign or move the physical
      * room: every live (inventory-blocking) status before checkout starts.
      */
+    /**
+     * When an unfinished booking expires (guest_booking.completion_window_minutes);
+     * null when expiry is switched off.
+     */
+    public static function completionDeadline(): ?CarbonImmutable
+    {
+        $minutes = (int) config('guest_booking.completion_window_minutes', 15);
+
+        return $minutes > 0 ? CarbonImmutable::now()->addMinutes($minutes) : null;
+    }
+
+    /**
+     * The same key may only replay the exact same booking.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function replay(Reservation $existing, array $data): Reservation
+    {
+        $same = $existing->room_type_id === (int) $data['room_type_id']
+            && $existing->check_in->toDateString() === CarbonImmutable::parse($data['check_in'])->toDateString()
+            && $existing->check_out->toDateString() === CarbonImmutable::parse($data['check_out'])->toDateString()
+            && $existing->adults === (int) ($data['adults'] ?? $existing->adults)
+            && $existing->children === (int) ($data['children'] ?? $existing->children);
+
+        if (! $same) {
+            throw new ReservationIdempotencyKeyConflictException('different booking');
+        }
+
+        return $existing;
+    }
+
     public const ROOM_ASSIGNABLE_STATUSES = [
         Reservation::STATUS_PENDING,
         Reservation::STATUS_DEPOSIT_HELD,

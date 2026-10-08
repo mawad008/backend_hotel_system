@@ -17,6 +17,8 @@ use App\Domain\Payment\Models\Payment;
 use App\Domain\Payment\Models\PaymentTransaction;
 use App\Domain\Reservation\Models\Guest;
 use App\Domain\Reservation\Models\Reservation;
+use App\Domain\StayServices\Services\FolioChargeService;
+use App\Domain\StayServices\Services\FolioService;
 use Tests\TestCase;
 
 /**
@@ -225,16 +227,18 @@ class GuestLaunchRulesTest extends TestCase
     {
         $this->actingGuest();
         // 2 nights × 123.45 = 246.90; 25% = 61.725 → 61.72 (halalas, truncated like the hold).
-        $rt = $this->roomType(hotel: ['deposit_percentage' => 25]);
+        $rt = $this->roomType(hotel: ['deposit_percentage' => 25, 'prices_include_taxes' => true]);
         $rt->update(['base_price' => '123.45']);
         $reservation = $this->book($rt);
 
         $this->getJson("/api/v1/guest/reservations/{$reservation->id}")
             ->assertJsonPath('data.hotel.deposit_percentage', '25.00')
-            ->assertJsonPath('data.hotel.deposit_amount', '61.72');
+            ->assertJsonPath('data.hotel.deposit_amount', '61.72')
+            // The payment screen's tax line reads this flag.
+            ->assertJsonPath('data.hotel.prices_include_taxes', true);
 
         $this->postJson("/api/v1/guest/reservations/{$reservation->id}/payment/hold")->assertCreated();
-        $this->assertSame('61.72', (string) \App\Domain\Payment\Models\Payment::where('reservation_id', $reservation->id)->value('amount'));
+        $this->assertSame('61.72', (string) Payment::where('reservation_id', $reservation->id)->value('amount'));
     }
 
     public function test_a_booking_snapshots_the_hotels_service_fee(): void
@@ -264,7 +268,7 @@ class GuestLaunchRulesTest extends TestCase
     {
         $this->actingGuest();
         $reservation = $this->book($this->roomType(hotel: ['service_fee_enabled' => true, 'service_fee_type' => 'fixed', 'service_fee_value' => '45.00']));
-        $charges = app(\App\Domain\StayServices\Services\FolioChargeService::class);
+        $charges = app(FolioChargeService::class);
 
         $charges->postAccommodationCharge($reservation, 'SAR', null);
         $first = $charges->postServiceFeeCharge($reservation, 'SAR', null);
@@ -272,7 +276,7 @@ class GuestLaunchRulesTest extends TestCase
 
         $this->assertSame($first->id, $again->id);
         $this->assertSame('45.00', (string) $first->total_amount);
-        $folio = app(\App\Domain\StayServices\Services\FolioService::class)->folioFor($reservation->fresh());
+        $folio = app(FolioService::class)->folioFor($reservation->fresh());
         $this->assertSame('245.00', $folio->chargesTotal);
 
         // No fee → no line.
@@ -280,4 +284,3 @@ class GuestLaunchRulesTest extends TestCase
         $this->assertNull($charges->postServiceFeeCharge($noFee, 'SAR', null));
     }
 }
-

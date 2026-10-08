@@ -28,9 +28,20 @@ class StoreGuestReservationRequest extends FormRequest
         return true;
     }
 
+    /** The guest app's Confirm sends an Idempotency-Key header (optional). */
+    protected function prepareForValidation(): void
+    {
+        $key = $this->header('Idempotency-Key');
+
+        if (is_string($key) && $key !== '') {
+            $this->merge(['idempotency_key' => $key]);
+        }
+    }
+
     public function rules(): array
     {
         return [
+            'idempotency_key' => ['sometimes', 'filled', 'string', 'max:255', 'regex:/^[A-Za-z0-9._:\-]+$/'],
             'room_type_id' => ['required', 'integer', 'exists:room_types,id'],
             'check_in' => ['required', 'date', 'after_or_equal:today'],
             'check_out' => ['required', 'date', 'after:check_in'],
@@ -85,6 +96,7 @@ class StoreGuestReservationRequest extends FormRequest
             'check_out' => $this->validated('check_out'),
             'adults' => (int) $this->validated('adults'),
             'children' => (int) $this->validated('children'),
+            'idempotency_key' => $this->validated('idempotency_key'),
         ];
     }
 }

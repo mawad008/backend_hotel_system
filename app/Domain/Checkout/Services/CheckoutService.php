@@ -19,6 +19,7 @@ use App\Domain\Reservation\Repositories\Contracts\ReservationRepositoryInterface
 use App\Domain\Reservation\Services\ReservationService;
 use App\Domain\StayServices\Services\FolioChargeService;
 use App\Domain\StayServices\Services\FolioService;
+use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -182,6 +183,9 @@ class CheckoutService
 
             // ── Start: IN_STAY -> CHECKOUT_IN_PROGRESS ──
             if ($reservation->status === Reservation::STATUS_IN_STAY) {
+                $this->recordDeparture($reservation, $actor);
+                $reservation = $this->reservations->findForUpdate($reservationId);
+
                 $this->reservationService->transitionTo(
                     $reservation, Reservation::STATUS_CHECKOUT_IN_PROGRESS, $actor,
                 );
@@ -239,6 +243,60 @@ class CheckoutService
                 'currency' => $currency,
             ];
         });
+    }
+
+    /**
+     * The guest may leave before the booked check-out date. Record when they
+     * actually left, and if that is before the booked date (hotel-local),
+     * shorten the stay to the nights actually used: `check_out` becomes the
+     * departure date and `price_snapshot` the stayed nights at the booking's
+     * average nightly rate. Everything downstream — the accommodation folio
+     * line, the invoice, occupancy reports, loyalty earn, and the room's
+     * availability for the freed nights — reads those two columns, so they
+     * follow. The booked values stay in `original_check_out` /
+     * `original_price_snapshot`. The service fee is a per-booking fee and is
+     * not prorated. A stay always counts at least one night.
+     *
+     * Runs inside STEP A's transaction, on the locked reservation.
+     */
+    private function recordDeparture(Reservation $reservation, ?User $actor): void
+    {
+        $now = now();
+        $timezone = $reservation->hotel?->timezone ?: config('app.timezone');
+        $departureDate = CarbonImmutable::instance($now)->setTimezone($timezone)->startOfDay();
+
+        $checkIn = CarbonImmutable::parse($reservation->check_in->toDateString());
+        $bookedCheckOut = CarbonImmutable::parse($reservation->check_out->toDateString());
+        $bookedNights = max((int) $checkIn->diffInDays($bookedCheckOut), 1);
+        $stayedNights = max((int) $checkIn->diffInDays(CarbonImmutable::parse($departureDate->toDateString()), false), 1);
+
+        if ($stayedNights >= $bookedNights || $reservation->price_snapshot === null) {
+            $this->reservations->update($reservation, ['checked_out_at' => $now]);
+
+            return;
+        }
+
+        $bookedPrice = bcadd((string) $reservation->price_snapshot, '0', 2);
+        // Average nightly rate × stayed nights; the last half-cent goes to the guest.
+        $stayedPrice = bcdiv(bcmul($bookedPrice, (string) $stayedNights, 4), (string) $bookedNights, 2);
+        $actualCheckOut = $checkIn->addDays($stayedNights);
+
+        $this->reservations->update($reservation, [
+            'checked_out_at' => $now,
+            'original_check_out' => $bookedCheckOut,
+            'original_price_snapshot' => $bookedPrice,
+            'check_out' => $actualCheckOut,
+            'price_snapshot' => $stayedPrice,
+        ]);
+
+        $this->auditLogger->record(
+            $actor,
+            'reservation.departed_early',
+            $reservation,
+            before: ['check_out' => $bookedCheckOut->toDateString(), 'nights' => $bookedNights, 'price_snapshot' => $bookedPrice],
+            after: ['check_out' => $actualCheckOut->toDateString(), 'nights' => $stayedNights, 'price_snapshot' => $stayedPrice],
+            hotelId: $reservation->hotel_id,
+        );
     }
 
     /**

@@ -195,17 +195,27 @@ class GuestDiscoveryTest extends TestCase
             ->assertJsonPath('data.rooms.0.estimated_total', '600.00');
     }
 
-    public function test_availability_greys_out_a_room_type_that_cannot_seat_the_party(): void
+    public function test_availability_omits_room_types_that_cannot_seat_the_party(): void
     {
         $hotel = Hotel::factory()->create();
-        $rt = RoomType::factory()->create(['hotel_id' => $hotel->id, 'capacity' => 2]);
-        Room::factory()->create(['hotel_id' => $hotel->id, 'room_type_id' => $rt->id]);
+        $small = RoomType::factory()->create(['hotel_id' => $hotel->id, 'capacity' => 2]);
+        $family = RoomType::factory()->create(['hotel_id' => $hotel->id, 'capacity' => 4]);
+        Room::factory()->create(['hotel_id' => $hotel->id, 'room_type_id' => $small->id]);
+        Room::factory()->create(['hotel_id' => $hotel->id, 'room_type_id' => $family->id]);
 
-        $res = $this->getJson("/api/v1/guest/hotels/{$hotel->id}/availability?check_in=".now()->addDay()->toDateString().'&check_out='.now()->addDays(2)->toDateString().'&adults=4');
+        $range = 'check_in='.now()->addDay()->toDateString().'&check_out='.now()->addDays(2)->toDateString();
 
-        $res->assertOk()
-            ->assertJsonPath('data.rooms.0.rooms_available', 0)
-            ->assertJsonPath('data.rooms.0.is_available', false);
+        // 3 adults + 1 child = 4 → only the family room fits.
+        $this->getJson("/api/v1/guest/hotels/{$hotel->id}/availability?{$range}&adults=3&children=1")
+            ->assertOk()
+            ->assertJsonCount(1, 'data.rooms')
+            ->assertJsonPath('data.rooms.0.room_type_id', $family->id)
+            ->assertJsonPath('data.rooms.0.is_available', true);
+
+        // 5 guests → nothing fits.
+        $this->getJson("/api/v1/guest/hotels/{$hotel->id}/availability?{$range}&adults=4&children=1")
+            ->assertOk()
+            ->assertJsonCount(0, 'data.rooms');
     }
 
     public function test_availability_validates_the_date_range(): void

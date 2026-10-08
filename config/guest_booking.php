@@ -34,6 +34,16 @@ return [
      */
     'free_cancellation_hours' => (int) env('GUEST_FREE_CANCELLATION_HOURS', 24),
 
+    /*
+     * Abandoned-booking window (minutes). A PENDING booking must be paid,
+     * and a DEPOSIT_HELD booking verified, within this many minutes (counted
+     * from creation / from the deposit hold). After that the scheduled
+     * `reservations:expire-abandoned` cancels it, releases the room and the
+     * deposit hold — unless a payment is still processing or the identity
+     * check is in manual review. 0 disables expiry.
+     */
+    'completion_window_minutes' => (int) env('RESERVATION_COMPLETION_WINDOW_MINUTES', 15),
+
     // The deposit is no longer configured here: each hotel sets its own
     // `deposit_percentage` (of the booked room price) on the dashboard
     // hotel form — see GuestPaymentController.

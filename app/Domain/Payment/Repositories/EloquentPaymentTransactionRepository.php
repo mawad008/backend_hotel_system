@@ -40,6 +40,16 @@ class EloquentPaymentTransactionRepository implements PaymentTransactionReposito
             ->first();
     }
 
+    public function hasPendingOfTypeSince(int $paymentId, string $type, \DateTimeInterface $since): bool
+    {
+        return PaymentTransaction::query()
+            ->where('payment_id', $paymentId)
+            ->where('type', $type)
+            ->where('status', PaymentTransaction::STATUS_PENDING)
+            ->where('created_at', '>=', $since)
+            ->exists();
+    }
+
     public function sumCollectedForPayment(int $paymentId): string
     {
         // The database computes the SUM over the DECIMAL column — no float

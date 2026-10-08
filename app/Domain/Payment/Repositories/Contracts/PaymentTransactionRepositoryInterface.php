@@ -38,6 +38,9 @@ interface PaymentTransactionRepositoryInterface
     /** The latest succeeded transaction of $type for a payment, or null. */
     public function latestSucceededOfType(int $paymentId, string $type): ?PaymentTransaction;
 
+    /** Whether a still-pending transaction of $type was opened at or after $since. */
+    public function hasPendingOfTypeSince(int $paymentId, string $type, \DateTimeInterface $since): bool;
+
     /**
      * The same "succeeded capture + settlement" sum as
      * sumCollectedForPayment(), computed for every reservation of

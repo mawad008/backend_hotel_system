@@ -6,6 +6,7 @@ use App\Domain\DigitalAccess\Services\DigitalAccessService;
 use App\Domain\Reservation\Models\Guest;
 use App\Domain\Reservation\Models\Reservation;
 use App\Domain\Reservation\Services\ReservationCancellationService;
+use App\Domain\Reservation\Services\ReservationExpiryService;
 use App\Domain\Reservation\Services\ReservationExtensionService;
 use App\Domain\Reservation\Services\ReservationService;
 use App\Domain\StayServices\Services\FolioService;
@@ -42,6 +43,7 @@ class GuestReservationController extends Controller
         private readonly FolioService $folios,
         private readonly ReservationCancellationService $cancellations,
         private readonly DigitalAccessService $digitalAccess,
+        private readonly ReservationExpiryService $expiry,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -66,17 +68,21 @@ class GuestReservationController extends Controller
         // ReservationService independently re-resolves the room type, derives
         // hotel_id, runs the approved availability/concurrency checks and
         // takes the price snapshot.
-        $reservation = $this->reservations->create(
-            $request->reservationData($guest->id),
-            actor: null,
-        );
+        $data = $request->reservationData($guest->id);
+
+        // The guest's own earlier unpaid attempt at this room + dates gives
+        // way to this one instead of blocking it until it expires.
+        $this->expiry->supersedeUnpaidAttempts($guest->id, $data['room_type_id'], $data['check_in'], $data['check_out'], $data['idempotency_key']);
+
+        $reservation = $this->reservations->create($data, actor: null);
 
         $reservation->load(['hotel.cover', 'hotel.cityRef', 'roomType']);
 
+        // A replayed Idempotency-Key returns the booking already made.
         return $this->success(
             new GuestReservationResource($reservation),
             __('api.created'),
-            201,
+            $reservation->wasRecentlyCreated ? 201 : 200,
         );
     }
 

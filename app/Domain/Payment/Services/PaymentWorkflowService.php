@@ -326,13 +326,28 @@ class PaymentWorkflowService
      * that is not active — a pending one reconciles on its late result). A provider failure leaves the payment as it
      * was and throws — never a faked refund.
      *
+     * $guard (optional) runs on the locked Reservation before anything is
+     * opened — a cancellation re-checks its policy there; it throws to
+     * refuse, or returns false when no release is due. The pending
+     * CANCEL_HOLD transaction opened under that lock is the fence check-in
+     * respects (DigitalAccessService::assertCheckInEligible), so a check-in can never slip
+     * in while the provider is releasing the money.
+     *
      * @throws PaymentRefundFailedException
      */
-    public function releaseHold(Reservation $reservation, ?User $actor = null): ?Payment
+    public function releaseHold(Reservation $reservation, ?User $actor = null, ?callable $guard = null): ?Payment
     {
         $provider = (string) config('payment.provider');
 
-        $open = DB::transaction(function () use ($reservation, $actor, $provider) {
+        $open = DB::transaction(function () use ($reservation, $actor, $provider, $guard) {
+            // Lock order Reservation -> Payment (§12, §25).
+            $locked = $this->reservations->findForUpdate($reservation->id);
+
+            // The guard may refuse (throw) or decline the release (false).
+            if ($locked !== null && $guard !== null && $guard($locked) === false) {
+                return null;
+            }
+
             $payment = $this->payments->findByReservationForUpdate($reservation->id);
 
             // Only an ACTIVE hold holds money; a still-pending hold follows the

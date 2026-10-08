@@ -3,6 +3,7 @@
 namespace App\Domain\Reservation\Repositories;
 
 use App\Domain\IdentityAccess\Models\User;
+use App\Domain\Payment\Models\Payment;
 use App\Domain\Reservation\Models\Guest;
 use App\Domain\Reservation\Models\Reservation;
 use App\Domain\Reservation\Repositories\Contracts\ReservationRepositoryInterface;
@@ -76,6 +77,11 @@ class EloquentReservationRepository implements ReservationRepositoryInterface
         return Reservation::query()->lockForUpdate()->find($id);
     }
 
+    public function findByGuestAndIdempotencyKey(int $guestId, string $key): ?Reservation
+    {
+        return Reservation::query()->where('guest_id', $guestId)->where('idempotency_key', $key)->first();
+    }
+
     public function update(Reservation $reservation, array $data): Reservation
     {
         $reservation->update($data);
@@ -124,6 +130,38 @@ class EloquentReservationRepository implements ReservationRepositoryInterface
         return $this->overlapQuery($from, $to)
             ->where('hotel_id', $hotelId)
             ->get(['id', 'check_in', 'check_out']);
+    }
+
+    public function pastCompletionDeadline(\DateTimeInterface $now, int $limit): Collection
+    {
+        return Reservation::query()
+            ->whereIn('status', [Reservation::STATUS_PENDING, Reservation::STATUS_DEPOSIT_HELD])
+            ->whereNotNull('completion_deadline_at')
+            ->where('completion_deadline_at', '<=', $now)
+            ->orderBy('completion_deadline_at')
+            ->limit($limit)
+            ->get();
+    }
+
+    public function cancelledWithActiveHold(int $limit): Collection
+    {
+        return Reservation::query()
+            ->where('status', Reservation::STATUS_CANCELLED)
+            ->whereHas('payment', fn (Builder $q) => $q->where('status', Payment::STATUS_HOLD_ACTIVE))
+            ->orderBy('id')
+            ->limit($limit)
+            ->get();
+    }
+
+    public function pendingForGuestOverlapping(int $guestId, int $roomTypeId, string $checkIn, string $checkOut): Collection
+    {
+        return Reservation::query()
+            ->where('guest_id', $guestId)
+            ->where('room_type_id', $roomTypeId)
+            ->where('status', Reservation::STATUS_PENDING)
+            ->where('check_in', '<', $checkOut)
+            ->where('check_out', '>', $checkIn)
+            ->get();
     }
 
     public function paginateForFolioLedger(int $hotelId, array $filters, int $perPage): LengthAwarePaginator

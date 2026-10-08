@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\V1\Guest\GuestCheckoutController;
 use App\Http\Controllers\Api\V1\Guest\GuestDigitalAccessController;
 use App\Http\Controllers\Api\V1\Guest\GuestDiscoveryController;
 use App\Http\Controllers\Api\V1\Guest\GuestFavoriteHotelController;
+use App\Http\Controllers\Api\V1\Guest\GuestFavoriteRoomTypeController;
 use App\Http\Controllers\Api\V1\Guest\GuestFolioController;
 use App\Http\Controllers\Api\V1\Guest\GuestIdentityVerificationController;
 use App\Http\Controllers\Api\V1\Guest\GuestInvoiceController;
@@ -38,7 +39,6 @@ use App\Http\Controllers\Api\V1\InvoiceController;
 use App\Http\Controllers\Api\V1\LoyaltyController;
 use App\Http\Controllers\Api\V1\LoyaltyRuleController;
 use App\Http\Controllers\Api\V1\NotificationController;
-use App\Http\Controllers\Api\V1\StaffNotificationController;
 use App\Http\Controllers\Api\V1\PaymentController;
 use App\Http\Controllers\Api\V1\PaymentWebhookController;
 use App\Http\Controllers\Api\V1\PermissionController;
@@ -56,6 +56,7 @@ use App\Http\Controllers\Api\V1\ServiceCategoryController;
 use App\Http\Controllers\Api\V1\ServiceController;
 use App\Http\Controllers\Api\V1\ServiceOrderController;
 use App\Http\Controllers\Api\V1\ServiceReviewController;
+use App\Http\Controllers\Api\V1\StaffNotificationController;
 use App\Http\Controllers\Api\V1\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -218,6 +219,16 @@ Route::prefix('v1')->group(function () {
                 ->middleware('throttle:guest.booking.write');
             Route::delete('/favorites/hotels/{hotel}', [GuestFavoriteHotelController::class, 'destroy'])
                 ->whereNumber('hotel')
+                ->middleware('throttle:guest.booking.write');
+
+            // Favourite rooms (room types) — the heart on Room Detail.
+            // Active room types in active hotels only; idempotent.
+            Route::get('/favorites/rooms', [GuestFavoriteRoomTypeController::class, 'index']);
+            Route::put('/favorites/rooms/{roomType}', [GuestFavoriteRoomTypeController::class, 'store'])
+                ->whereNumber('roomType')
+                ->middleware('throttle:guest.booking.write');
+            Route::delete('/favorites/rooms/{roomType}', [GuestFavoriteRoomTypeController::class, 'destroy'])
+                ->whereNumber('roomType')
                 ->middleware('throttle:guest.booking.write');
 
             // The guest's whole in-app feed (all reservations) — the app's

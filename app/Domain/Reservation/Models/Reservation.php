@@ -73,10 +73,13 @@ class Reservation extends Model
         'guest_id',
         'check_in',
         'check_out',
+        'checked_out_at',
+        'original_check_out',
         'adults',
         'children',
         'status',
         'price_snapshot',
+        'original_price_snapshot',
         'service_fee_amount',
         'currency',
         'is_refundable',
@@ -86,6 +89,8 @@ class Reservation extends Model
         'created_by_staff_id',
         'cancelled_at',
         'cancellation_reason',
+        'completion_deadline_at',
+        'idempotency_key',
     ];
 
     /**
@@ -106,14 +111,18 @@ class Reservation extends Model
         return [
             'check_in' => 'date',
             'check_out' => 'date',
+            'checked_out_at' => 'datetime',
+            'original_check_out' => 'date',
             'adults' => 'integer',
             'children' => 'integer',
             'price_snapshot' => 'decimal:2',
+            'original_price_snapshot' => 'decimal:2',
             'service_fee_amount' => 'decimal:2',
             'is_refundable' => 'boolean',
             'free_cancellation_until' => 'datetime',
             'room_assigned_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'completion_deadline_at' => 'datetime',
         ];
     }
 

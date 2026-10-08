@@ -6,6 +6,7 @@ use App\Domain\DigitalAccess\Services\DigitalAccessService;
 use App\Domain\Reservation\Models\Reservation;
 use App\Domain\Reservation\Services\ReservationCancellationService;
 use App\Domain\StayServices\Models\FolioCharge;
+use App\Http\Resources\V1\HotelResource;
 use App\Support\LocalizedContent;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
@@ -42,9 +43,15 @@ class GuestReservationResource extends JsonResource
             'hotel_id' => $this->hotel_id,
             'room_type_id' => $this->room_type_id,
             'status' => $this->status,
+            // Finish (pay / verify) before this or the booking is released.
+            'completion_deadline_at' => $this->completion_deadline_at?->toIso8601String(),
             'check_in' => optional($this->check_in)->toDateString(),
             'check_out' => optional($this->check_out)->toDateString(),
             'nights' => $nights,
+            // Early departure: when the guest left, and the booked check-out
+            // the stay was shortened from (null when it ran its full length).
+            'checked_out_at' => $this->checked_out_at?->toIso8601String(),
+            'original_check_out' => optional($this->original_check_out)->toDateString(),
             'adults' => $this->adults,
             'children' => $this->children,
             'price_snapshot' => $this->price_snapshot,
@@ -77,11 +84,14 @@ class GuestReservationResource extends JsonResource
                 'cover_url' => $this->hotel->relationLoaded('cover') ? $this->hotel->cover?->url() : null,
                 'reception_phone' => $this->hotel->reception_phone,
                 'check_in_mode' => $this->hotel->check_in_mode,
-                'check_in_time' => \App\Http\Resources\V1\HotelResource::hhmm($this->hotel->check_in_time),
+                'check_in_time' => HotelResource::hhmm($this->hotel->check_in_time),
                 // What the deposit hold will be for this booking (shown on
                 // the payment screens before the hold is placed).
                 'deposit_percentage' => $this->hotel->deposit_percentage,
                 'deposit_amount' => $this->hotel->depositFor((string) $this->price_snapshot),
+                // Whether the room rate already includes taxes (no separate
+                // tax line is ever added to the booking total).
+                'prices_include_taxes' => (bool) $this->hotel->prices_include_taxes,
             ]),
             'room_type' => $this->whenLoaded('roomType', fn () => [
                 'id' => $this->roomType->id,

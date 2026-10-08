@@ -43,6 +43,7 @@ use App\Domain\Reservation\Exceptions\InvalidReservationStatusTransitionExceptio
 use App\Domain\Reservation\Exceptions\ReservationCancellationNotAllowedException;
 use App\Domain\Reservation\Exceptions\ReservationExtensionIdempotencyKeyConflictException;
 use App\Domain\Reservation\Exceptions\ReservationExtensionNotAllowedException;
+use App\Domain\Reservation\Exceptions\ReservationIdempotencyKeyConflictException;
 use App\Domain\Reservation\Exceptions\ReservationNotAvailableException;
 use App\Domain\Reservation\Exceptions\ReservationRoomAssignmentNotAllowedException;
 use App\Domain\Reservation\Exceptions\RoomHotelMismatchException;
@@ -245,6 +246,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->renderable(function (ReservationExtensionIdempotencyKeyConflictException $e, Request $request) use ($envelope) {
             if ($request->is('api/*')) {
                 return $envelope($e->getMessage(), 422);
+            }
+        });
+        $exceptions->renderable(function (ReservationIdempotencyKeyConflictException $e, Request $request) use ($envelope) {
+            if ($request->is('api/*')) {
+                return $envelope($e->getMessage(), 422, ['reason' => 'idempotency_key_conflict']);
             }
         });
 

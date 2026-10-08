@@ -67,9 +67,10 @@ class HotelDiscoveryService
 
     /**
      * Per-room-type availability for [$checkIn, $checkOut). Room types whose
-     * capacity cannot seat the party are still returned but with
-     * roomsAvailable forced to 0 (the client greys them out) — mirroring how
-     * the design shows sold-out rooms rather than hiding them.
+     * capacity cannot seat the party (adults + children) are left out
+     * entirely — a room that does not fit the guest's occupancy is never a
+     * result. Sold-out room types that DO fit are still returned with
+     * roomsAvailable 0 (the client greys them out).
      *
      * @return Collection<int, RoomAvailability>
      */
@@ -78,22 +79,21 @@ class HotelDiscoveryService
         $nights = CarbonImmutable::parse($checkIn)->diffInDays(CarbonImmutable::parse($checkOut));
         $party = $adults + $children;
 
-        return $this->activeRoomTypes($hotelId)->map(function ($roomType) use ($checkIn, $checkOut, $nights, $party): RoomAvailability {
-            $total = $this->rooms->countByRoomType($roomType->id);
-            $blocking = $this->reservations->countOverlappingForRoomType($roomType->id, $checkIn, $checkOut);
-            $free = max(0, $total - $blocking);
+        return $this->activeRoomTypes($hotelId)
+            ->filter(fn ($roomType): bool => $roomType->capacity >= $party)
+            ->values()
+            ->map(function ($roomType) use ($checkIn, $checkOut, $nights): RoomAvailability {
+                $total = $this->rooms->countByRoomType($roomType->id);
+                $blocking = $this->reservations->countOverlappingForRoomType($roomType->id, $checkIn, $checkOut);
+                $free = max(0, $total - $blocking);
 
-            if ($roomType->capacity < $party) {
-                $free = 0;
-            }
-
-            return new RoomAvailability(
-                roomType: $roomType,
-                roomsTotal: $total,
-                roomsAvailable: $free,
-                nights: $nights,
-                estimatedTotal: number_format((float) $roomType->base_price * $nights, 2, '.', ''),
-            );
-        });
+                return new RoomAvailability(
+                    roomType: $roomType,
+                    roomsTotal: $total,
+                    roomsAvailable: $free,
+                    nights: $nights,
+                    estimatedTotal: number_format((float) $roomType->base_price * $nights, 2, '.', ''),
+                );
+            });
     }
 }

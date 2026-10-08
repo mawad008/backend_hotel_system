@@ -69,6 +69,9 @@ interface ReservationRepositoryInterface
      */
     public function findForUpdate(int $id): ?Reservation;
 
+    /** The guest's booking made with this create Idempotency-Key, if any. */
+    public function findByGuestAndIdempotencyKey(int $guestId, string $key): ?Reservation;
+
     /**
      * @param  array<string, mixed>  $data
      */
@@ -144,6 +147,28 @@ interface ReservationRepositoryInterface
      * @return Collection<int, Reservation>
      */
     public function overlappingForHotel(int $hotelId, string $from, string $to): Collection;
+
+    /**
+     * PENDING / DEPOSIT_HELD reservations whose completion deadline passed.
+     *
+     * @return Collection<int, Reservation>
+     */
+    public function pastCompletionDeadline(\DateTimeInterface $now, int $limit): Collection;
+
+    /**
+     * CANCELLED reservations whose payment still holds an active deposit.
+     *
+     * @return Collection<int, Reservation>
+     */
+    public function cancelledWithActiveHold(int $limit): Collection;
+
+    /**
+     * The guest's own unpaid (PENDING) bookings of this room type that
+     * overlap the given stay.
+     *
+     * @return Collection<int, Reservation>
+     */
+    public function pendingForGuestOverlapping(int $guestId, int $roomTypeId, string $checkIn, string $checkOut): Collection;
 
     /**
      * Reservations of $hotelId eligible for the standalone folio ledger

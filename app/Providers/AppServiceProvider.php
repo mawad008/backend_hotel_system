@@ -28,8 +28,10 @@ use App\Domain\DigitalAccess\Provider\SimulationDirective as DigitalAccessSimula
 use App\Domain\DigitalAccess\Repositories\Contracts\AccessGrantRepositoryInterface;
 use App\Domain\DigitalAccess\Repositories\EloquentAccessGrantRepository;
 use App\Domain\Discovery\Repositories\Contracts\GuestFavoriteHotelRepositoryInterface;
+use App\Domain\Discovery\Repositories\Contracts\GuestFavoriteRoomTypeRepositoryInterface;
 use App\Domain\Discovery\Repositories\Contracts\HotelCatalogRepositoryInterface;
 use App\Domain\Discovery\Repositories\EloquentGuestFavoriteHotelRepository;
+use App\Domain\Discovery\Repositories\EloquentGuestFavoriteRoomTypeRepository;
 use App\Domain\Discovery\Repositories\EloquentHotelCatalogRepository;
 use App\Domain\GuestAccess\Otp\Contracts\OtpSenderInterface;
 use App\Domain\GuestAccess\Otp\DummyOtpSender;
@@ -58,15 +60,14 @@ use App\Domain\IdentityAccess\Repositories\Contracts\UserRepositoryInterface;
 use App\Domain\IdentityAccess\Repositories\EloquentPermissionRepository;
 use App\Domain\IdentityAccess\Repositories\EloquentRoleRepository;
 use App\Domain\IdentityAccess\Repositories\EloquentUserRepository;
+use App\Domain\IdentityVerification\DocumentCheck\IdentityDocumentCatalog;
 use App\Domain\IdentityVerification\Models\IdentityVerificationSession;
 use App\Domain\IdentityVerification\Policies\IdentityVerificationPolicy;
 use App\Domain\IdentityVerification\Provider\AzureDocumentIntelligenceProvider;
 use App\Domain\IdentityVerification\Provider\Contracts\IdentityDocumentProviderInterface;
 use App\Domain\IdentityVerification\Provider\Contracts\IdentityVerificationProviderInterface;
-use App\Domain\IdentityVerification\Provider\DummyIdentityDocumentProvider;
 use App\Domain\IdentityVerification\Provider\DocumentProviderRouter;
-use App\Domain\IdentityVerification\DocumentCheck\IdentityDocumentCatalog;
-use Illuminate\Http\Client\Factory as HttpFactory;
+use App\Domain\IdentityVerification\Provider\DummyIdentityDocumentProvider;
 use App\Domain\IdentityVerification\Provider\DummyIdentityVerificationProvider;
 use App\Domain\IdentityVerification\Provider\Exceptions\UnsupportedIdentityVerificationProviderException;
 use App\Domain\IdentityVerification\Provider\SimulationDirective as IdentityVerificationSimulationDirective;
@@ -162,7 +163,9 @@ use App\Domain\Support\Models\ProblemReport;
 use App\Domain\Support\Policies\ProblemReportPolicy;
 use App\Domain\Support\Repositories\Contracts\ProblemReportRepositoryInterface;
 use App\Domain\Support\Repositories\EloquentProblemReportRepository;
+use App\Http\Resources\V1\Support\RoomDetailContent;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -190,6 +193,7 @@ class AppServiceProvider extends ServiceProvider
         GuestOtpChallengeRepositoryInterface::class => EloquentGuestOtpChallengeRepository::class,
         HotelCatalogRepositoryInterface::class => EloquentHotelCatalogRepository::class,
         GuestFavoriteHotelRepositoryInterface::class => EloquentGuestFavoriteHotelRepository::class,
+        GuestFavoriteRoomTypeRepositoryInterface::class => EloquentGuestFavoriteRoomTypeRepository::class,
         CountryRepositoryInterface::class => EloquentCountryRepository::class,
         CityRepositoryInterface::class => EloquentCityRepository::class,
         PaymentRepositoryInterface::class => EloquentPaymentRepository::class,
@@ -259,7 +263,7 @@ class AppServiceProvider extends ServiceProvider
         // config('otp.sender'). "dummy" is the only implementation — an
         // explicitly configured but unsupported sender fails loudly.
         // Room Detail content reads the facility catalog once per request.
-        $this->app->scoped(\App\Http\Resources\V1\Support\RoomDetailContent::class);
+        $this->app->scoped(RoomDetailContent::class);
 
         $this->app->singleton(OtpSenderInterface::class, function (): OtpSenderInterface {
             $sender = (string) config('otp.sender');

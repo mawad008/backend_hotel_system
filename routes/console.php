@@ -1,6 +1,8 @@
 <?php
 
+use App\Domain\IdentityVerification\DocumentCheck\IdentityDocumentCatalog;
 use App\Domain\IdentityVerification\Services\IdentityImageRetentionService;
+use App\Domain\Reservation\Services\ReservationExpiryService;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -11,6 +13,13 @@ Artisan::command('inspire', function () {
 
 // Identity image retention (Phase 0 §17, R58) — daily; the hotel keeps a
 // stay's ID images for IDENTITY_VERIFICATION_RETENTION_DAYS (30, the maximum).
+Artisan::command('reservations:expire-abandoned', function (ReservationExpiryService $expiry) {
+    $r = $expiry->sweep();
+    $this->info("Expired: {$r['expired']} (skipped in progress: {$r['skipped']}); deposit holds released: {$r['holds_released']} (still pending: {$r['holds_pending']}).");
+})->purpose('Cancel bookings left unpaid / unverified past the completion window and release their room + deposit hold');
+
+Schedule::command('reservations:expire-abandoned')->everyMinute()->withoutOverlapping();
+
 Artisan::command('identity:purge-expired-images', function (IdentityImageRetentionService $retention) {
     $purged = $retention->purgeExpired();
     $this->info($purged === null
@@ -33,7 +42,7 @@ Schedule::command('identity:purge-ocr-artifacts')->hourly();
 // Identity document routes — makes a missing production model obvious.
 // Exit code 1 when an ENABLED route has no model while the real provider is
 // active (wire it into deploy checks / monitoring).
-Artisan::command('identity:document-providers', function (\App\Domain\IdentityVerification\DocumentCheck\IdentityDocumentCatalog $catalog) {
+Artisan::command('identity:document-providers', function (IdentityDocumentCatalog $catalog) {
     $provider = (string) config('verification.document_provider');
     $rows = [];
     $missing = 0;
