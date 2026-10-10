@@ -32,6 +32,7 @@ class HotelResource extends JsonResource
             'star_rating' => $this->star_rating,
             'deposit_percentage' => $this->deposit_percentage,
             'prices_include_taxes' => (bool) $this->prices_include_taxes,
+            'tax_rate' => $this->tax_rate,
             'service_fee_enabled' => (bool) $this->service_fee_enabled,
             'service_fee_type' => $this->service_fee_type,
             'service_fee_value' => $this->service_fee_value,

@@ -19,7 +19,9 @@ class UserController extends Controller
     {
         $this->authorize('viewAny', User::class);
 
-        return $this->success(UserResource::collection($this->users->list()));
+        $perPage = max(1, min($request->integer('per_page', 15), 100));
+
+        return $this->success(UserResource::collection($this->users->list($perPage)));
     }
 
     public function store(StoreUserRequest $request): JsonResponse

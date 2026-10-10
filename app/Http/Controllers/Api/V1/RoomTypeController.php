@@ -25,7 +25,9 @@ class RoomTypeController extends Controller
     {
         $this->authorize('viewAny', [RoomType::class, $hotel]);
 
-        $roomTypes = $this->roomTypes->listForHotel($request->user(), $hotel);
+        $perPage = max(1, min($request->integer('per_page', 15), 100));
+
+        $roomTypes = $this->roomTypes->listForHotel($request->user(), $hotel, $perPage);
         $roomTypes->getCollection()->load('media');
 
         return $this->success(RoomTypeResource::collection($roomTypes));

@@ -57,6 +57,13 @@ class FolioCharge extends Model
      */
     public const SOURCE_SERVICE_FEE = 'service_fee';
 
+    /**
+     * The booking tax ("الضريبة") when the hotel's rates exclude taxes —
+     * `source_id` = the reservation id, one per booking; amount =
+     * `Reservation::taxAmount()` (snapshotted rate × final stay + fee).
+     */
+    public const SOURCE_TAX = 'tax';
+
     public const STATUS_POSTED = 'posted';
 
     public const STATUS_CANCELLED = 'cancelled';

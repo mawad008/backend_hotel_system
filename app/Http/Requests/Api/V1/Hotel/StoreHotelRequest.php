@@ -59,6 +59,8 @@ class StoreHotelRequest extends FormRequest
             'deposit_percentage' => ['required', 'numeric', 'between:0,100', 'decimal:0,2'],
             // Whether displayed rates already include taxes / the service fee.
             'prices_include_taxes' => ['sometimes', 'boolean'],
+            // Tax % added on top when rates do NOT include taxes; null = none.
+            'tax_rate' => ['sometimes', 'nullable', 'numeric', 'between:0,100', 'decimal:0,2'],
             // Booking service fee ("رسوم الخدمة"): fixed per booking or % of the stay.
             'service_fee_enabled' => ['sometimes', 'boolean'],
             'service_fee_type' => ['nullable', 'required_if_accepted:service_fee_enabled', Rule::in(Hotel::SERVICE_FEE_TYPES)],

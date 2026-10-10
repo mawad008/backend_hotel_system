@@ -283,4 +283,49 @@ class GuestLaunchRulesTest extends TestCase
         $noFee = $this->book($this->roomType());
         $this->assertNull($charges->postServiceFeeCharge($noFee, 'SAR', null));
     }
+
+    public function test_a_booking_snapshots_the_hotels_tax_rate_when_rates_exclude_taxes(): void
+    {
+        $this->actingGuest();
+        // 2 nights × 100 = 200.00 + fixed fee 45 = 245.00; 15% tax = 36.75.
+        $taxed = $this->book($this->roomType(hotel: [
+            'prices_include_taxes' => false, 'tax_rate' => '15.00',
+            'service_fee_enabled' => true, 'service_fee_type' => 'fixed', 'service_fee_value' => '45.00',
+        ]));
+        $this->assertSame('15.00', (string) $taxed->tax_rate);
+        $this->getJson("/api/v1/guest/reservations/{$taxed->id}")
+            ->assertJsonPath('data.tax_rate', '15.00')
+            ->assertJsonPath('data.tax_amount', '36.75')
+            ->assertJsonPath('data.total_amount', '281.75');
+
+        // Rates already include taxes → the hotel's rate is never added.
+        $inclusive = $this->book($this->roomType(hotel: ['prices_include_taxes' => true, 'tax_rate' => '15.00']));
+        $this->assertSame('0.00', (string) $inclusive->tax_rate);
+        $this->getJson("/api/v1/guest/reservations/{$inclusive->id}")
+            ->assertJsonPath('data.tax_amount', '0.00')
+            ->assertJsonPath('data.total_amount', '200.00');
+
+        // A later dashboard change never re-prices the existing booking.
+        $taxed->hotel->update(['tax_rate' => '5.00']);
+        $this->assertSame('36.75', $taxed->fresh()->taxAmount());
+    }
+
+    public function test_the_tax_is_billed_once_as_its_own_folio_line(): void
+    {
+        $this->actingGuest();
+        $reservation = $this->book($this->roomType(hotel: ['prices_include_taxes' => false, 'tax_rate' => '15.00']));
+        $charges = app(FolioChargeService::class);
+
+        $charges->postAccommodationCharge($reservation, 'SAR', null);
+        $first = $charges->postTaxCharge($reservation, 'SAR', null);
+        $again = $charges->postTaxCharge($reservation->fresh(), 'SAR', null);
+
+        $this->assertSame($first->id, $again->id);
+        $this->assertSame('30.00', (string) $first->total_amount);
+        $this->assertSame('230.00', app(FolioService::class)->folioFor($reservation->fresh())->chargesTotal);
+
+        // No tax rate → no line.
+        $noTax = $this->book($this->roomType());
+        $this->assertNull($charges->postTaxCharge($noTax, 'SAR', null));
+    }
 }

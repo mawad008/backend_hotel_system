@@ -81,6 +81,7 @@ class Reservation extends Model
         'price_snapshot',
         'original_price_snapshot',
         'service_fee_amount',
+        'tax_rate',
         'currency',
         'is_refundable',
         'free_cancellation_until',
@@ -118,6 +119,7 @@ class Reservation extends Model
             'price_snapshot' => 'decimal:2',
             'original_price_snapshot' => 'decimal:2',
             'service_fee_amount' => 'decimal:2',
+            'tax_rate' => 'decimal:2',
             'is_refundable' => 'boolean',
             'free_cancellation_until' => 'datetime',
             'room_assigned_at' => 'datetime',
@@ -160,6 +162,36 @@ class Reservation extends Model
     public function payment(): HasOne
     {
         return $this->hasOne(Payment::class);
+    }
+
+    /**
+     * The tax on this booking: the snapshotted `tax_rate` % of the current
+     * stay price + service fee, to the halala. Derived (not stored) so stay
+     * extensions and early departure re-tax the stay automatically.
+     */
+    public function taxAmount(): string
+    {
+        $rate = (string) ($this->tax_rate ?? '0');
+
+        if (bccomp($rate, '0', 2) <= 0) {
+            return '0.00';
+        }
+
+        $base = bcadd((string) ($this->price_snapshot ?? '0'), (string) ($this->service_fee_amount ?? '0'), 2);
+
+        return bcdiv(bcmul($base, $rate, 4), '100', 2);
+    }
+
+    /**
+     * What the guest pays in all: stay price + service fee + tax.
+     */
+    public function totalAmount(): string
+    {
+        return bcadd(
+            bcadd((string) ($this->price_snapshot ?? '0'), (string) ($this->service_fee_amount ?? '0'), 2),
+            $this->taxAmount(),
+            2,
+        );
     }
 
     protected static function newFactory(): ReservationFactory

@@ -130,6 +130,28 @@ class RoomDetailContentTest extends TestCase
         $this->getJson("/api/v1/guest/hotels/{$hotel->id}")->assertJsonPath('data.service_fee', null);
     }
 
+    public function test_the_tax_rate_is_editable_and_only_exposed_when_rates_exclude_taxes(): void
+    {
+        $hotel = Hotel::factory()->create();
+        $this->getJson("/api/v1/guest/hotels/{$hotel->id}")->assertJsonPath('data.tax_rate', null);
+
+        $this->actingAs($this->owner(), 'sanctum')
+            ->patchJson("/api/v1/hotels/{$hotel->id}", ['prices_include_taxes' => false, 'tax_rate' => 15])
+            ->assertOk()
+            ->assertJsonPath('data.tax_rate', '15.00');
+        $this->getJson("/api/v1/guest/hotels/{$hotel->id}")->assertJsonPath('data.tax_rate', '15.00');
+
+        $this->actingAs($this->owner(), 'sanctum')
+            ->patchJson("/api/v1/hotels/{$hotel->id}", ['prices_include_taxes' => true])
+            ->assertOk();
+        $this->getJson("/api/v1/guest/hotels/{$hotel->id}")->assertJsonPath('data.tax_rate', null);
+
+        $this->actingAs($this->owner(), 'sanctum')
+            ->patchJson("/api/v1/hotels/{$hotel->id}", ['tax_rate' => 150])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['tax_rate']);
+    }
+
     public function test_an_enabled_service_fee_needs_a_valid_type_and_value(): void
     {
         $hotel = Hotel::factory()->create();

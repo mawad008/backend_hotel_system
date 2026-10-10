@@ -214,6 +214,8 @@ class CheckoutService
             $this->folioCharges->postAccommodationCharge($reservation, $reservation->currency ?? $payment?->currency, $actor);
             // The booking's service fee (snapshotted at booking) as its own line.
             $this->folioCharges->postServiceFeeCharge($reservation, $reservation->currency ?? $payment?->currency, $actor);
+            // The booking's tax (snapshotted rate × final stay + fee) as its own line.
+            $this->folioCharges->postTaxCharge($reservation, $reservation->currency ?? $payment?->currency, $actor);
 
             // ── Authoritative folio ──
             $folio = $this->folioService->folioFor($reservation);

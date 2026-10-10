@@ -21,4 +21,11 @@ return [
     'invoice' => 'الفواتير',
     'loyalty' => 'الولاء',
     'notifications' => 'الإشعارات',
+    'app-content' => 'تطبيق النزلاء',
+    'reviews' => 'التقييمات',
+    'review-categories' => 'بنود التقييم',
+    'problems' => 'بلاغات المشاكل',
+    'guests' => 'النزلاء',
+    'reports' => 'التقارير',
+    'audit' => 'سجل التدقيق',
 ];

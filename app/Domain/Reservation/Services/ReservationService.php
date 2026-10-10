@@ -248,6 +248,8 @@ class ReservationService
             $data['price_snapshot'] = bcmul((string) $roomType->base_price, (string) max($nights, 1), 2);
             // The hotel's booking service fee, snapshotted (dashboard changes never re-price a booking).
             $data['service_fee_amount'] = $roomType->hotel->serviceFeeFor($data['price_snapshot']);
+            // The hotel's tax rate when its rates exclude taxes (0 otherwise), snapshotted the same way.
+            $data['tax_rate'] = $roomType->hotel->effectiveTaxRate();
             // Approved cancellation policy, snapshotted at booking time.
             $data = array_merge($data, ReservationCancellationService::snapshotFor($roomType, $roomType->hotel, (string) $checkIn));
             $data['currency'] = strtoupper((string) config('payment.currency'));

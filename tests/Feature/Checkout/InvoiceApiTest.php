@@ -68,6 +68,22 @@ class InvoiceApiTest extends TestCase
             ->assertJsonStructure(['data' => ['invoice_number', 'status', 'currency', 'items', 'issued_at']]);
     }
 
+    public function test_invoice_carries_the_printable_document_header(): void
+    {
+        $reservation = $this->checkedOutReservation();
+
+        $this->actingAs($this->owner(), 'sanctum')
+            ->getJson("/api/v1/reservations/{$reservation->id}/invoice")
+            ->assertOk()
+            ->assertJsonPath('data.document.hotel.name', $reservation->hotel->name)
+            ->assertJsonPath('data.document.stay.room_type', $reservation->roomType->name)
+            ->assertJsonStructure(['data' => ['document' => [
+                'hotel' => ['name', 'name_i18n', 'logo_url', 'city', 'country', 'phone'],
+                'guest',
+                'stay' => ['check_in', 'check_out', 'nights', 'adults', 'children', 'room_type', 'room_number', 'tax_rate'],
+            ]]]);
+    }
+
     public function test_invoice_is_404_before_checkout(): void
     {
         $hotel = Hotel::factory()->create();

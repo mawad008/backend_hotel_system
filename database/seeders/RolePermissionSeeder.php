@@ -23,55 +23,7 @@ class RolePermissionSeeder extends Seeder
 {
     public function run(): void
     {
-        $permissions = [
-            'app-content.manage' => ['Manage guest app content', 'إدارة محتوى تطبيق النزلاء', 'Edit the guest app branding (logo, app name) and onboarding content', 'تعديل هوية تطبيق النزلاء (الشعار واسم التطبيق) ومحتوى شاشة الترحيب'],
-            'hotel-groups.manage' => ['Manage hotel groups', 'إدارة مجموعات الفنادق', 'Create and update hotel groups', 'إنشاء مجموعات الفنادق وتحديثها'],
-            'hotels.view' => ['View hotels', 'عرض الفنادق', 'View hotels within authorized scope', 'عرض الفنادق ضمن النطاق المصرح به'],
-            'hotels.manage' => ['Manage hotels', 'إدارة الفنادق', 'Create and update hotels', 'إنشاء الفنادق وتحديثها'],
-            'hotels.update' => ['Edit assigned hotels', 'تعديل الفنادق المسندة', 'Edit the profile and content of assigned hotels (no create, delete, group change or deactivation)', 'تعديل بيانات ومحتوى الفنادق المسندة (دون الإنشاء أو الحذف أو تغيير المجموعة أو إيقاف التفعيل)'],
-            'facilities.view' => ['View facilities', 'عرض المرافق', 'View the hotel facility catalog', 'عرض كتالوج مرافق الفندق'],
-            'facilities.manage' => ['Manage facilities', 'إدارة المرافق', 'Create, update, delete, activate/deactivate hotel facilities', 'إنشاء مرافق الفندق وتحديثها وحذفها وتفعيلها/تعطيلها'],
-            'locations.view' => ['View locations', 'عرض المواقع', 'View country and city master data', 'عرض بيانات الدول والمدن الأساسية'],
-            'locations.manage' => ['Manage locations', 'إدارة المواقع', 'Create, update, delete, activate/deactivate countries and cities', 'إنشاء الدول والمدن وتحديثها وحذفها وتفعيلها/تعطيلها'],
-            'users.view' => ['View users', 'عرض المستخدمين', 'View staff users', 'عرض مستخدمي الطاقم'],
-            'users.manage' => ['Manage users', 'إدارة المستخدمين', 'Create, update, and delete staff users', 'إنشاء مستخدمي الطاقم وتحديثهم وحذفهم'],
-            'roles.view' => ['View roles', 'عرض الأدوار', 'View roles', 'عرض الأدوار'],
-            'roles.manage' => ['Manage roles', 'إدارة الأدوار', 'Create, update, and delete roles, and manage their permission assignments', 'إنشاء الأدوار وتحديثها وحذفها، وإدارة الصلاحيات المسندة إليها'],
-            'permissions.view' => ['View permissions', 'عرض الصلاحيات', 'View permissions', 'عرض الصلاحيات'],
-            'inventory.view' => ['View inventory', 'عرض المخزون', 'View room types and rooms within authorized scope', 'عرض أنواع الغرف والغرف ضمن النطاق المصرح به'],
-            'inventory.manage' => ['Manage inventory', 'إدارة المخزون', 'Create, update, activate/deactivate room types and rooms', 'إنشاء أنواع الغرف والغرف وتحديثها وتفعيلها/تعطيلها'],
-            'reservations.view' => ['View reservations', 'عرض الحجوزات', 'View reservations within authorized scope', 'عرض الحجوزات ضمن النطاق المصرح به'],
-            'reservations.manage' => ['Manage reservations', 'إدارة الحجوزات', 'Create reservations within authorized scope', 'إنشاء الحجوزات ضمن النطاق المصرح به'],
-            'reservations.assign-room' => ['Assign rooms', 'تخصيص الغرف', 'Assign or move the physical room of a reservation within authorized scope', 'تخصيص الغرفة الفعلية للحجز أو نقلها ضمن النطاق المصرح به'],
-            'payments.manage' => ['Manage payments', 'إدارة المدفوعات', 'Initiate and manage reservation payments within authorized scope', 'بدء وإدارة مدفوعات الحجوزات ضمن النطاق المصرح به'],
-            'payments.view' => ['View payments', 'عرض المدفوعات', 'View the staff-facing hotel payments ledger within authorized scope', 'عرض سجل مدفوعات الفندق ضمن النطاق المصرح به'],
-            'identity-verification.view' => ['View identity verification', 'عرض التحقق من الهوية', 'View identity verification status within authorized scope', 'عرض حالة التحقق من الهوية ضمن النطاق المصرح به'],
-            'identity-verification.submit' => ['Submit identity verification', 'إرسال التحقق من الهوية', 'Submit identity document/selfie for a reservation within authorized scope', 'إرسال وثيقة الهوية/الصورة الشخصية لحجز ضمن النطاق المصرح به'],
-            'identity-verification.review' => ['Review identity verification', 'مراجعة التحقق من الهوية', 'Decide a pending identity verification manual review within authorized scope', 'البت في مراجعة يدوية معلّقة للتحقق من الهوية ضمن النطاق المصرح به'],
-            'check-in.perform' => ['Perform check-in', 'تنفيذ تسجيل الوصول', 'Perform reservation check-in within authorized scope', 'تنفيذ تسجيل وصول الحجز ضمن النطاق المصرح به'],
-            'digital-access.view' => ['View digital access', 'عرض الوصول الرقمي', 'View digital access status within authorized scope', 'عرض حالة الوصول الرقمي ضمن النطاق المصرح به'],
-            'digital-access.revoke' => ['Revoke digital access', 'إلغاء الوصول الرقمي', 'Revoke a reservation digital access credential within authorized scope', 'إلغاء بيانات اعتماد الوصول الرقمي لحجز ضمن النطاق المصرح به'],
-            'services.view' => ['View services', 'عرض الخدمات', 'View the hotel service catalog within authorized scope', 'عرض كتالوج خدمات الفندق ضمن النطاق المصرح به'],
-            'services.manage' => ['Manage services', 'إدارة الخدمات', 'Create, update, activate/deactivate hotel services and categories within authorized scope', 'إنشاء خدمات الفندق وفئاتها وتحديثها وتفعيلها/تعطيلها ضمن النطاق المصرح به'],
-            'service-orders.view' => ['View service orders', 'عرض طلبات الخدمة', 'View reservation service orders within authorized scope', 'عرض طلبات خدمة الحجوزات ضمن النطاق المصرح به'],
-            'service-orders.manage' => ['Manage service orders', 'إدارة طلبات الخدمة', 'Record and transition reservation service orders within authorized scope', 'تسجيل طلبات خدمة الحجوزات ونقل حالتها ضمن النطاق المصرح به'],
-            'folio.view' => ['View folio', 'عرض الفاتورة الجارية', 'View a reservation folio within authorized scope', 'عرض الفاتورة الجارية لحجز ضمن النطاق المصرح به'],
-            'checkout.perform' => ['Perform checkout', 'تنفيذ المغادرة', 'Perform reservation checkout and final settlement within authorized scope', 'تنفيذ مغادرة الحجز والتسوية النهائية ضمن النطاق المصرح به'],
-            'invoice.view' => ['View invoice', 'عرض الفاتورة', 'View a reservation invoice within authorized scope', 'عرض فاتورة حجز ضمن النطاق المصرح به'],
-            'loyalty.view' => ['View loyalty', 'عرض الولاء', 'View a guest loyalty account and ledger within authorized scope', 'عرض حساب وسجل ولاء النزيل ضمن النطاق المصرح به'],
-            'loyalty.manage' => ['Manage loyalty', 'إدارة الولاء', 'Accrue and redeem loyalty points against a reservation within authorized scope', 'استحقاق واسترداد نقاط الولاء مقابل حجز ضمن النطاق المصرح به'],
-            'loyalty.rules.manage' => ['Manage loyalty rules', 'إدارة قواعد الولاء', 'Configure a hotel group loyalty rule', 'ضبط قاعدة الولاء الخاصة بمجموعة الفنادق'],
-            'notifications.view' => ['View notifications', 'عرض الإشعارات', 'View and mark read a reservation notification feed within authorized scope', 'عرض قائمة إشعارات الحجز وتحديدها كمقروءة ضمن النطاق المصرح به'],
-            'reviews.view' => ['View reviews', 'عرض التقييمات', 'View a hotel\'s guest reviews, including pending/rejected, within authorized scope', 'عرض تقييمات نزلاء الفندق، بما في ذلك المعلّقة/المرفوضة، ضمن النطاق المصرح به'],
-            'reviews.moderate' => ['Moderate reviews', 'مراجعة التقييمات', 'Approve or reject a submitted guest review within authorized scope', 'الموافقة على تقييم نزيل مُرسل أو رفضه ضمن النطاق المصرح به'],
-            'review-categories.manage' => ['Manage review categories', 'إدارة بنود التقييم', 'Create, edit, reorder, activate/deactivate and delete a hotel\'s review categories', 'إنشاء بنود تقييم الفندق وتعديلها وترتيبها وتفعيلها وتعطيلها وحذفها'],
-            'problems.view' => ['View problem reports', 'عرض بلاغات المشاكل', 'View guest-submitted problem reports within authorized scope', 'عرض بلاغات المشاكل المُرسلة من النزلاء ضمن النطاق المصرح به'],
-            'problems.manage' => ['Manage problem reports', 'إدارة بلاغات المشاكل', 'Triage and transition a guest problem report\'s status within authorized scope', 'فرز بلاغ مشكلة النزيل ونقل حالته ضمن النطاق المصرح به'],
-            'guests.view' => ['View guests', 'عرض النزلاء', 'View the staff-facing guest directory and a guest\'s reservation history', 'عرض دليل النزلاء وسجل حجوزات النزيل'],
-            'guests.manage' => ['Manage guests', 'إدارة النزلاء', 'Register a walk-in guest with no app account yet', 'تسجيل نزيل حضر مباشرة دون حساب في التطبيق'],
-            'reports.view' => ['View reports', 'عرض التقارير', 'View occupancy, revenue and hotel comparison reports within authorized scope', 'عرض تقارير الإشغال والإيرادات ومقارنة الفنادق ضمن النطاق المصرح به'],
-            'audit.view' => ['View audit log', 'عرض سجل التدقيق', 'View the audit trail of sensitive actions within authorized scope', 'عرض سجل تدقيق الإجراءات الحساسة ضمن النطاق المصرح به'],
-        ];
+        $permissions = self::permissionCatalog();
 
         // A single bulk upsert instead of one firstOrCreate() round trip per
         // permission — every test in the suite reseeds this table in its
@@ -183,5 +135,65 @@ class RolePermissionSeeder extends Seeder
 
             $role->permissions()->sync($permissionIds);
         }
+    }
+
+    /**
+     * The fixed permission catalog: slug => [name_en, name_ar,
+     * description_en, description_ar]. Shared with the migration that
+     * backfills it into already-seeded databases.
+     *
+     * @return array<string, array{0: string, 1: string, 2: string, 3: string}>
+     */
+    public static function permissionCatalog(): array
+    {
+        return [
+            'app-content.manage' => ['Manage guest app content', 'إدارة محتوى تطبيق النزلاء', 'Edit the guest app branding (logo, app name) and onboarding content', 'تعديل هوية تطبيق النزلاء (الشعار واسم التطبيق) ومحتوى شاشة الترحيب'],
+            'hotel-groups.manage' => ['Manage hotel groups', 'إدارة مجموعات الفنادق', 'Create and update hotel groups', 'إنشاء مجموعات الفنادق وتحديثها'],
+            'hotels.view' => ['View hotels', 'عرض الفنادق', 'View hotels within authorized scope', 'عرض الفنادق ضمن النطاق المصرح به'],
+            'hotels.manage' => ['Manage hotels', 'إدارة الفنادق', 'Create and update hotels', 'إنشاء الفنادق وتحديثها'],
+            'hotels.update' => ['Edit assigned hotels', 'تعديل الفنادق المسندة', 'Edit the profile and content of assigned hotels (no create, delete, group change or deactivation)', 'تعديل بيانات ومحتوى الفنادق المسندة (دون الإنشاء أو الحذف أو تغيير المجموعة أو إيقاف التفعيل)'],
+            'facilities.view' => ['View facilities', 'عرض المرافق', 'View the hotel facility catalog', 'عرض كتالوج مرافق الفندق'],
+            'facilities.manage' => ['Manage facilities', 'إدارة المرافق', 'Create, update, delete, activate/deactivate hotel facilities', 'إنشاء مرافق الفندق وتحديثها وحذفها وتفعيلها/تعطيلها'],
+            'locations.view' => ['View locations', 'عرض المواقع', 'View country and city master data', 'عرض بيانات الدول والمدن الأساسية'],
+            'locations.manage' => ['Manage locations', 'إدارة المواقع', 'Create, update, delete, activate/deactivate countries and cities', 'إنشاء الدول والمدن وتحديثها وحذفها وتفعيلها/تعطيلها'],
+            'users.view' => ['View users', 'عرض المستخدمين', 'View staff users', 'عرض مستخدمي الطاقم'],
+            'users.manage' => ['Manage users', 'إدارة المستخدمين', 'Create, update, and delete staff users', 'إنشاء مستخدمي الطاقم وتحديثهم وحذفهم'],
+            'roles.view' => ['View roles', 'عرض الأدوار', 'View roles', 'عرض الأدوار'],
+            'roles.manage' => ['Manage roles', 'إدارة الأدوار', 'Create, update, and delete roles, and manage their permission assignments', 'إنشاء الأدوار وتحديثها وحذفها، وإدارة الصلاحيات المسندة إليها'],
+            'permissions.view' => ['View permissions', 'عرض الصلاحيات', 'View permissions', 'عرض الصلاحيات'],
+            'inventory.view' => ['View inventory', 'عرض المخزون', 'View room types and rooms within authorized scope', 'عرض أنواع الغرف والغرف ضمن النطاق المصرح به'],
+            'inventory.manage' => ['Manage inventory', 'إدارة المخزون', 'Create, update, activate/deactivate room types and rooms', 'إنشاء أنواع الغرف والغرف وتحديثها وتفعيلها/تعطيلها'],
+            'reservations.view' => ['View reservations', 'عرض الحجوزات', 'View reservations within authorized scope', 'عرض الحجوزات ضمن النطاق المصرح به'],
+            'reservations.manage' => ['Manage reservations', 'إدارة الحجوزات', 'Create reservations within authorized scope', 'إنشاء الحجوزات ضمن النطاق المصرح به'],
+            'reservations.assign-room' => ['Assign rooms', 'تخصيص الغرف', 'Assign or move the physical room of a reservation within authorized scope', 'تخصيص الغرفة الفعلية للحجز أو نقلها ضمن النطاق المصرح به'],
+            'payments.manage' => ['Manage payments', 'إدارة المدفوعات', 'Initiate and manage reservation payments within authorized scope', 'بدء وإدارة مدفوعات الحجوزات ضمن النطاق المصرح به'],
+            'payments.view' => ['View payments', 'عرض المدفوعات', 'View the staff-facing hotel payments ledger within authorized scope', 'عرض سجل مدفوعات الفندق ضمن النطاق المصرح به'],
+            'identity-verification.view' => ['View identity verification', 'عرض التحقق من الهوية', 'View identity verification status within authorized scope', 'عرض حالة التحقق من الهوية ضمن النطاق المصرح به'],
+            'identity-verification.submit' => ['Submit identity verification', 'إرسال التحقق من الهوية', 'Submit identity document/selfie for a reservation within authorized scope', 'إرسال وثيقة الهوية/الصورة الشخصية لحجز ضمن النطاق المصرح به'],
+            'identity-verification.review' => ['Review identity verification', 'مراجعة التحقق من الهوية', 'Decide a pending identity verification manual review within authorized scope', 'البت في مراجعة يدوية معلّقة للتحقق من الهوية ضمن النطاق المصرح به'],
+            'check-in.perform' => ['Perform check-in', 'تنفيذ تسجيل الوصول', 'Perform reservation check-in within authorized scope', 'تنفيذ تسجيل وصول الحجز ضمن النطاق المصرح به'],
+            'digital-access.view' => ['View digital access', 'عرض الوصول الرقمي', 'View digital access status within authorized scope', 'عرض حالة الوصول الرقمي ضمن النطاق المصرح به'],
+            'digital-access.revoke' => ['Revoke digital access', 'إلغاء الوصول الرقمي', 'Revoke a reservation digital access credential within authorized scope', 'إلغاء بيانات اعتماد الوصول الرقمي لحجز ضمن النطاق المصرح به'],
+            'services.view' => ['View services', 'عرض الخدمات', 'View the hotel service catalog within authorized scope', 'عرض كتالوج خدمات الفندق ضمن النطاق المصرح به'],
+            'services.manage' => ['Manage services', 'إدارة الخدمات', 'Create, update, activate/deactivate hotel services and categories within authorized scope', 'إنشاء خدمات الفندق وفئاتها وتحديثها وتفعيلها/تعطيلها ضمن النطاق المصرح به'],
+            'service-orders.view' => ['View service orders', 'عرض طلبات الخدمة', 'View reservation service orders within authorized scope', 'عرض طلبات خدمة الحجوزات ضمن النطاق المصرح به'],
+            'service-orders.manage' => ['Manage service orders', 'إدارة طلبات الخدمة', 'Record and transition reservation service orders within authorized scope', 'تسجيل طلبات خدمة الحجوزات ونقل حالتها ضمن النطاق المصرح به'],
+            'folio.view' => ['View folio', 'عرض الفاتورة الجارية', 'View a reservation folio within authorized scope', 'عرض الفاتورة الجارية لحجز ضمن النطاق المصرح به'],
+            'checkout.perform' => ['Perform checkout', 'تنفيذ المغادرة', 'Perform reservation checkout and final settlement within authorized scope', 'تنفيذ مغادرة الحجز والتسوية النهائية ضمن النطاق المصرح به'],
+            'invoice.view' => ['View invoice', 'عرض الفاتورة', 'View a reservation invoice within authorized scope', 'عرض فاتورة حجز ضمن النطاق المصرح به'],
+            'loyalty.view' => ['View loyalty', 'عرض الولاء', 'View a guest loyalty account and ledger within authorized scope', 'عرض حساب وسجل ولاء النزيل ضمن النطاق المصرح به'],
+            'loyalty.manage' => ['Manage loyalty', 'إدارة الولاء', 'Accrue and redeem loyalty points against a reservation within authorized scope', 'استحقاق واسترداد نقاط الولاء مقابل حجز ضمن النطاق المصرح به'],
+            'loyalty.rules.manage' => ['Manage loyalty rules', 'إدارة قواعد الولاء', 'Configure a hotel group loyalty rule', 'ضبط قاعدة الولاء الخاصة بمجموعة الفنادق'],
+            'notifications.view' => ['View notifications', 'عرض الإشعارات', 'View and mark read a reservation notification feed within authorized scope', 'عرض قائمة إشعارات الحجز وتحديدها كمقروءة ضمن النطاق المصرح به'],
+            'reviews.view' => ['View reviews', 'عرض التقييمات', 'View a hotel\'s guest reviews, including pending/rejected, within authorized scope', 'عرض تقييمات نزلاء الفندق، بما في ذلك المعلّقة/المرفوضة، ضمن النطاق المصرح به'],
+            'reviews.moderate' => ['Moderate reviews', 'مراجعة التقييمات', 'Approve or reject a submitted guest review within authorized scope', 'الموافقة على تقييم نزيل مُرسل أو رفضه ضمن النطاق المصرح به'],
+            'review-categories.manage' => ['Manage review categories', 'إدارة بنود التقييم', 'Create, edit, reorder, activate/deactivate and delete a hotel\'s review categories', 'إنشاء بنود تقييم الفندق وتعديلها وترتيبها وتفعيلها وتعطيلها وحذفها'],
+            'problems.view' => ['View problem reports', 'عرض بلاغات المشاكل', 'View guest-submitted problem reports within authorized scope', 'عرض بلاغات المشاكل المُرسلة من النزلاء ضمن النطاق المصرح به'],
+            'problems.manage' => ['Manage problem reports', 'إدارة بلاغات المشاكل', 'Triage and transition a guest problem report\'s status within authorized scope', 'فرز بلاغ مشكلة النزيل ونقل حالته ضمن النطاق المصرح به'],
+            'guests.view' => ['View guests', 'عرض النزلاء', 'View the staff-facing guest directory and a guest\'s reservation history', 'عرض دليل النزلاء وسجل حجوزات النزيل'],
+            'guests.manage' => ['Manage guests', 'إدارة النزلاء', 'Register a walk-in guest with no app account yet', 'تسجيل نزيل حضر مباشرة دون حساب في التطبيق'],
+            'reports.view' => ['View reports', 'عرض التقارير', 'View occupancy, revenue and hotel comparison reports within authorized scope', 'عرض تقارير الإشغال والإيرادات ومقارنة الفنادق ضمن النطاق المصرح به'],
+            'audit.view' => ['View audit log', 'عرض سجل التدقيق', 'View the audit trail of sensitive actions within authorized scope', 'عرض سجل تدقيق الإجراءات الحساسة ضمن النطاق المصرح به'],
+        ];
     }
 }

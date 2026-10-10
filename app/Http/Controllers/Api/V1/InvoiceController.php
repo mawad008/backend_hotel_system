@@ -48,6 +48,12 @@ class InvoiceController extends Controller
             abort(404);
         }
 
+        // The printable invoice's header: issuing hotel, billed guest, stay.
+        $invoice->load([
+            'reservation.guest', 'reservation.roomType', 'reservation.room',
+            'hotel.logo', 'hotel.cityRef', 'hotel.countryRef', 'hotel.hotelGroup',
+        ]);
+
         return $this->success(new InvoiceResource($invoice), __('api.checkout.invoice'));
     }
 

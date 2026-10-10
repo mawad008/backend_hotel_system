@@ -58,6 +58,8 @@ class PublicHotelResource extends JsonResource
             'deposit_percentage' => $this->deposit_percentage,
             // Room Detail: "الضرائب والرسوم · شاملة" only when true.
             'prices_include_taxes' => (bool) $this->prices_include_taxes,
+            // Tax % added on top of the rate (+ service fee); null when rates include taxes or there is none.
+            'tax_rate' => bccomp($this->resource->effectiveTaxRate(), '0', 2) === 1 ? $this->resource->effectiveTaxRate() : null,
             // The booking service fee ("رسوم الخدمة"); null when the hotel has none.
             'service_fee' => $this->service_fee_enabled && $this->service_fee_value !== null
                 ? ['type' => $this->service_fee_type, 'value' => $this->service_fee_value]

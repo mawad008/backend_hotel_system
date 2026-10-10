@@ -206,6 +206,17 @@ class EarlyDepartureTest extends TestCase
         $this->assertSame('100.00', (string) $this->postedCharge($reservation, FolioCharge::SOURCE_ACCOMMODATION)->total_amount);
     }
 
+    public function test_the_tax_is_charged_on_the_actual_stay(): void
+    {
+        $reservation = $this->stay(serviceFee: '50.00');
+        $reservation->update(['tax_rate' => '10.00']);
+
+        // (100.00 stayed + 50.00 fee) × 10% = 15.00.
+        $this->checkout($reservation)->assertOk()->assertJsonPath('data.totals.charges_total', '165.00');
+
+        $this->assertSame('15.00', (string) $this->postedCharge($reservation, FolioCharge::SOURCE_TAX)->total_amount);
+    }
+
     public function test_the_invoice_bills_the_actual_stay(): void
     {
         $reservation = $this->stay();

@@ -55,9 +55,11 @@ class GuestReservationResource extends JsonResource
             'adults' => $this->adults,
             'children' => $this->children,
             'price_snapshot' => $this->price_snapshot,
-            // The booking service fee (snapshotted) and what the guest pays in all.
+            // The booking service fee + tax (rate snapshotted) and what the guest pays in all.
             'service_fee_amount' => $this->service_fee_amount ?? '0.00',
-            'total_amount' => bcadd((string) ($this->price_snapshot ?? '0'), (string) ($this->service_fee_amount ?? '0'), 2),
+            'tax_rate' => $this->tax_rate ?? '0.00',
+            'tax_amount' => $this->resource->taxAmount(),
+            'total_amount' => $this->resource->totalAmount(),
             // The reservation's own snapshot — never the current platform value.
             'currency' => $this->currency ?: config('payment.currency'),
             'loyalty_discount' => $this->loyaltyDiscount(),
@@ -89,8 +91,8 @@ class GuestReservationResource extends JsonResource
                 // the payment screens before the hold is placed).
                 'deposit_percentage' => $this->hotel->deposit_percentage,
                 'deposit_amount' => $this->hotel->depositFor((string) $this->price_snapshot),
-                // Whether the room rate already includes taxes (no separate
-                // tax line is ever added to the booking total).
+                // Whether the room rate already includes taxes (when false,
+                // the snapshotted `tax_rate` adds a tax line to the total).
                 'prices_include_taxes' => (bool) $this->hotel->prices_include_taxes,
             ]),
             'room_type' => $this->whenLoaded('roomType', fn () => [

@@ -71,6 +71,20 @@ class Hotel extends Model
             : bcadd($value, '0', 2);
     }
 
+    /**
+     * The tax rate ("نسبة الضريبة") a new booking is charged: the hotel's
+     * `tax_rate` when its displayed rates do NOT include taxes, otherwise
+     * "0.00" (the tax is already in the rate).
+     */
+    public function effectiveTaxRate(): string
+    {
+        if ($this->prices_include_taxes || $this->tax_rate === null) {
+            return '0.00';
+        }
+
+        return bcadd((string) $this->tax_rate, '0', 2);
+    }
+
     public function allowsSelfCheckIn(): bool
     {
         return in_array($this->check_in_mode ?? self::CHECK_IN_BOTH, [self::CHECK_IN_SELF, self::CHECK_IN_BOTH], true);
@@ -90,6 +104,7 @@ class Hotel extends Model
         'star_rating',
         'deposit_percentage',
         'prices_include_taxes',
+        'tax_rate',
         'service_fee_enabled',
         'service_fee_type',
         'service_fee_value',
@@ -123,6 +138,7 @@ class Hotel extends Model
             'star_rating' => 'integer',
             'deposit_percentage' => 'decimal:2',
             'prices_include_taxes' => 'boolean',
+            'tax_rate' => 'decimal:2',
             'service_fee_enabled' => 'boolean',
             'service_fee_value' => 'decimal:2',
             'meta_title_i18n' => 'array',

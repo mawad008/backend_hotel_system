@@ -28,4 +28,11 @@ return [
     'invoice' => 'Invoice',
     'loyalty' => 'Loyalty',
     'notifications' => 'Notifications',
+    'app-content' => 'Guest App',
+    'reviews' => 'Reviews',
+    'review-categories' => 'Review Categories',
+    'problems' => 'Problem Reports',
+    'guests' => 'Guests',
+    'reports' => 'Reports',
+    'audit' => 'Audit Log',
 ];

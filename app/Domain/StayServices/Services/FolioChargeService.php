@@ -129,11 +129,31 @@ class FolioChargeService
     {
         $amount = bcadd((string) ($reservation->service_fee_amount ?? '0'), '0', 2);
 
+        return $this->postReservationLine($reservation, FolioCharge::SOURCE_SERVICE_FEE, 'Service fee', $amount, $currency, $actor);
+    }
+
+    /**
+     * Post (once) the booking's tax line — the snapshotted tax rate applied
+     * to the final stay price + service fee. Call it after any early
+     * departure has re-priced the stay. Idempotent (`source_type = tax`,
+     * `source_id = reservation.id`); nothing is posted when the booking has
+     * no tax (rates include taxes, or the hotel has no tax rate).
+     */
+    public function postTaxCharge(Reservation $reservation, ?string $currency, ?User $actor): ?FolioCharge
+    {
+        return $this->postReservationLine($reservation, FolioCharge::SOURCE_TAX, 'Tax', $reservation->taxAmount(), $currency, $actor);
+    }
+
+    /**
+     * One idempotent per-reservation line (`source_id` = reservation id).
+     */
+    private function postReservationLine(Reservation $reservation, string $sourceType, string $description, string $amount, ?string $currency, ?User $actor): ?FolioCharge
+    {
         if (bccomp($amount, '0.00', 2) <= 0) {
             return null;
         }
 
-        $existing = $this->charges->findBySourceForUpdate(FolioCharge::SOURCE_SERVICE_FEE, $reservation->id);
+        $existing = $this->charges->findBySourceForUpdate($sourceType, $reservation->id);
 
         if ($existing !== null) {
             return $existing;
@@ -143,9 +163,9 @@ class FolioChargeService
             $charge = $this->charges->create([
                 'reservation_id' => $reservation->id,
                 'hotel_id' => $reservation->hotel_id,
-                'source_type' => FolioCharge::SOURCE_SERVICE_FEE,
+                'source_type' => $sourceType,
                 'source_id' => $reservation->id,
-                'description' => 'Service fee',
+                'description' => $description,
                 'quantity' => 1,
                 'unit_amount' => $amount,
                 'total_amount' => $amount,
@@ -155,7 +175,7 @@ class FolioChargeService
                 'created_by_user_id' => $actor?->id,
             ]);
         } catch (UniqueConstraintViolationException) {
-            return $this->charges->findBySource(FolioCharge::SOURCE_SERVICE_FEE, $reservation->id);
+            return $this->charges->findBySource($sourceType, $reservation->id);
         }
 
         $this->auditLogger->record($actor, 'folio_charge.created', $charge, after: [

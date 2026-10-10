@@ -30,9 +30,11 @@ class ReservationResource extends JsonResource
             'status' => $this->status,
             'completion_deadline_at' => $this->completion_deadline_at?->toIso8601String(),
             'price_snapshot' => $this->price_snapshot,
-            // The booking service fee (snapshotted) and what the guest pays in all.
+            // The booking service fee + tax (rate snapshotted) and what the guest pays in all.
             'service_fee_amount' => $this->service_fee_amount ?? '0.00',
-            'total_amount' => bcadd((string) ($this->price_snapshot ?? '0'), (string) ($this->service_fee_amount ?? '0'), 2),
+            'tax_rate' => $this->tax_rate ?? '0.00',
+            'tax_amount' => $this->resource->taxAmount(),
+            'total_amount' => $this->resource->totalAmount(),
             'currency' => $this->currency,
             'is_refundable' => (bool) $this->is_refundable,
             'free_cancellation_until' => $this->free_cancellation_until,
