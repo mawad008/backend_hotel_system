@@ -15,6 +15,7 @@ use App\Http\Requests\Api\V1\IdentityVerification\SubmitIdentitySelfieRequest;
 use App\Http\Resources\V1\IdentityVerificationResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 /**
  * Phase 6 — the identity verification HTTP surface (Phase 0 §16:
@@ -134,6 +135,36 @@ class IdentityVerificationController extends Controller
         $session = $this->verification->statusFor($found);
 
         return $this->success($this->resource($session), __('api.identity_verification.status'));
+    }
+
+    /**
+     * GET /api/v1/identity-verification/{reservation}/images/{kind} — the
+     * latest attempt's ID front / back / selfie, for staff with
+     * `identity-verification.view` on the hotel. Streamed decrypted, never
+     * cached, never a public URL; each view is audited.
+     */
+    public function image(Request $request, int $reservation, string $kind): Response
+    {
+        $found = $this->reservations->findAccessibleBy($request->user(), $reservation);
+
+        if (! $found) {
+            abort(404);
+        }
+
+        $this->authorize('view', [IdentityVerificationSession::class, $found]);
+
+        $image = $this->verification->imageFor($found, $kind, $request->user());
+
+        if ($image === null) {
+            abort(404);
+        }
+
+        return response($image['bytes'], 200, [
+            'Content-Type' => $image['mime'],
+            'Content-Disposition' => 'inline',
+            'Cache-Control' => 'no-store, private',
+            'X-Content-Type-Options' => 'nosniff',
+        ]);
     }
 
     /**

@@ -25,7 +25,9 @@ use RuntimeException;
  *    tampered path can never traverse outside `identity-verification/`;
  *  - only the relative storage path is returned — never a URL.
  *
- * No route serves these files back; OCR reads them in memory only.
+ * OCR reads them in memory only. The one route that serves them back is the
+ * staff-only, audited, uncached
+ * `GET /identity-verification/{reservation}/images/{kind}`.
  */
 final class IdentityFileStore
 {

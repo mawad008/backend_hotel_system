@@ -243,6 +243,44 @@ class FolioChargeService
     }
 
     /**
+     * Early departure: cut one extension's charge back to the nights of it
+     * the guest actually stayed, at the extension's own nightly rate — the
+     * guest is never billed for nights after they left. Unused entirely →
+     * the charge is cancelled; partly used → quantity/total are reduced in
+     * place (the `(source_type, source_id)` UNIQUE allows one row).
+     *
+     * MUST be called from within the caller's DB transaction.
+     */
+    public function shortenStayExtensionCharge(int $extensionId, int $nightsUsed, ?User $actor): ?FolioCharge
+    {
+        $charge = $this->charges->findBySourceForUpdate(FolioCharge::SOURCE_STAY_EXTENSION, $extensionId);
+
+        if ($charge === null || $charge->status !== FolioCharge::STATUS_POSTED || $nightsUsed >= $charge->quantity) {
+            return $charge;
+        }
+
+        $before = ['status' => $charge->status, 'quantity' => $charge->quantity, 'total_amount' => (string) $charge->total_amount];
+
+        $charge = $nightsUsed <= 0
+            ? $this->charges->update($charge, [
+                'status' => FolioCharge::STATUS_CANCELLED,
+                'cancelled_at' => now(),
+            ])
+            : $this->charges->update($charge, [
+                'quantity' => $nightsUsed,
+                'total_amount' => bcmul((string) $charge->unit_amount, (string) $nightsUsed, 2),
+            ]);
+
+        $this->auditLogger->record($actor, 'folio_charge.adjusted', $charge,
+            before: $before,
+            after: ['status' => $charge->status, 'quantity' => $charge->quantity, 'total_amount' => (string) $charge->total_amount, 'reason' => 'early_departure'],
+            hotelId: $charge->hotel_id,
+        );
+
+        return $charge;
+    }
+
+    /**
      * Post (once) a loyalty redemption discount against the booking — a
      * negative line, capped at the accommodation total (`price_snapshot`), so
      * points only ever discount the stay, never services (R59). Idempotent

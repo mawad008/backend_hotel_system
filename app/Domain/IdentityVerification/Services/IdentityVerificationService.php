@@ -115,6 +115,53 @@ class IdentityVerificationService
     // ═════════════════════════════════════════════════════════════════════
 
     /**
+     * The decrypted bytes + detected MIME type of one image of the latest
+     * attempt (`document` / `document_back` / `selfie`), for staff to look at
+     * the guest's ID — the only way a stored identity file leaves the store.
+     * Every view is audited (who, which reservation, which image). Null when
+     * the attempt has no such image (never uploaded, or already purged).
+     *
+     * @return array{bytes: string, mime: string}|null
+     */
+    public function imageFor(Reservation $reservation, string $kind, ?User $actor): ?array
+    {
+        $session = $this->sessions->findByReservation($reservation->id);
+        $attempt = $session !== null ? $this->attempts->latestForSession($session->id) : null;
+
+        $path = match ($kind) {
+            IdentityFileStore::KIND_DOCUMENT => $attempt?->document_path,
+            IdentityFileStore::KIND_DOCUMENT_BACK => $attempt?->document_back_path,
+            IdentityFileStore::KIND_SELFIE => $attempt?->selfie_path,
+            default => null,
+        };
+
+        if ($session === null || $attempt === null || $path === null || $path === '') {
+            return null;
+        }
+
+        try {
+            $bytes = $this->files->read($path);
+        } catch (\RuntimeException) {
+            return null;
+        }
+
+        $mime = $this->files->detectMime($bytes);
+        if ($mime === null) {
+            return null;
+        }
+
+        $this->auditLogger->record(
+            $actor,
+            'identity_verification.image_viewed',
+            $session,
+            after: ['reservation_id' => $reservation->id, 'attempt_id' => $attempt->id, 'kind' => $kind],
+            hotelId: $session->hotel_id,
+        );
+
+        return ['bytes' => $bytes, 'mime' => $mime];
+    }
+
+    /**
      * The verification session for a Reservation. When none exists yet a
      * transient NOT_STARTED session is returned (never persisted) so the
      * status endpoint can answer without a 404.

@@ -3,6 +3,7 @@
 namespace App\Domain\Reservation\Repositories\Contracts;
 
 use App\Domain\Reservation\Models\ReservationExtension;
+use Illuminate\Database\Eloquent\Collection;
 
 interface ReservationExtensionRepositoryInterface
 {
@@ -14,6 +15,13 @@ interface ReservationExtensionRepositoryInterface
      * `PaymentTransactionRepositoryInterface::findByIdempotencyKey()`.
      */
     public function findByIdempotencyKey(string $key): ?ReservationExtension;
+
+    /**
+     * A reservation's extensions in stay order (earliest segment first).
+     *
+     * @return Collection<int, ReservationExtension>
+     */
+    public function allForReservation(int $reservationId): Collection;
 
     /**
      * @param  array<string, mixed>  $data

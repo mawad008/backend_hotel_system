@@ -15,6 +15,7 @@ use App\Domain\Payment\Models\PaymentTransaction;
 use App\Domain\Payment\Repositories\Contracts\PaymentRepositoryInterface;
 use App\Domain\Payment\Services\PaymentSettlementService;
 use App\Domain\Reservation\Models\Reservation;
+use App\Domain\Reservation\Repositories\Contracts\ReservationExtensionRepositoryInterface;
 use App\Domain\Reservation\Repositories\Contracts\ReservationRepositoryInterface;
 use App\Domain\Reservation\Services\ReservationService;
 use App\Domain\StayServices\Services\FolioChargeService;
@@ -76,6 +77,7 @@ class CheckoutService
         private readonly PaymentSettlementService $settlement,
         private readonly FolioService $folioService,
         private readonly FolioChargeService $folioCharges,
+        private readonly ReservationExtensionRepositoryInterface $extensions,
         private readonly InvoiceService $invoiceService,
         private readonly AuditLogger $auditLogger,
     ) {}
@@ -246,16 +248,23 @@ class CheckoutService
     }
 
     /**
-     * The guest may leave before the booked check-out date. Record when they
-     * actually left, and if that is before the booked date (hotel-local),
-     * shorten the stay to the nights actually used: `check_out` becomes the
-     * departure date and `price_snapshot` the stayed nights at the booking's
-     * average nightly rate. Everything downstream — the accommodation folio
-     * line, the invoice, occupancy reports, loyalty earn, and the room's
-     * availability for the freed nights — reads those two columns, so they
-     * follow. The booked values stay in `original_check_out` /
-     * `original_price_snapshot`. The service fee is a per-booking fee and is
-     * not prorated. A stay always counts at least one night.
+     * The guest may leave any day of the stay, not only on the booked
+     * check-out date. Record when they actually left; if that is before the
+     * booked check-out (hotel-local date), bill only the nights stayed:
+     *
+     * - the originally booked nights at their booking rate (the stay price
+     *   before extensions ÷ those nights — `base_price` × nights at booking);
+     * - each Extend Stay segment at that extension's own `unit_price`, for
+     *   the nights of it actually used. Its separate `stay_extension` folio
+     *   line is cut back to match (cancelled if never reached), so no night
+     *   after departure is ever billed.
+     *
+     * `check_out` becomes the departure date and `price_snapshot` the stayed
+     * total. The accommodation folio line, invoice, settlement, occupancy
+     * reports, loyalty earn and the room's availability for the freed nights
+     * all read those columns. The booked values stay in `original_check_out`
+     * / `original_price_snapshot`. The service fee is per booking and is not
+     * prorated. A stay always counts at least one night.
      *
      * Runs inside STEP A's transaction, on the locked reservation.
      */
@@ -263,12 +272,12 @@ class CheckoutService
     {
         $now = now();
         $timezone = $reservation->hotel?->timezone ?: config('app.timezone');
-        $departureDate = CarbonImmutable::instance($now)->setTimezone($timezone)->startOfDay();
+        $today = CarbonImmutable::parse(CarbonImmutable::instance($now)->setTimezone($timezone)->toDateString());
 
         $checkIn = CarbonImmutable::parse($reservation->check_in->toDateString());
         $bookedCheckOut = CarbonImmutable::parse($reservation->check_out->toDateString());
         $bookedNights = max((int) $checkIn->diffInDays($bookedCheckOut), 1);
-        $stayedNights = max((int) $checkIn->diffInDays(CarbonImmutable::parse($departureDate->toDateString()), false), 1);
+        $stayedNights = min(max((int) $checkIn->diffInDays($today, false), 1), $bookedNights);
 
         if ($stayedNights >= $bookedNights || $reservation->price_snapshot === null) {
             $this->reservations->update($reservation, ['checked_out_at' => $now]);
@@ -276,10 +285,28 @@ class CheckoutService
             return;
         }
 
-        $bookedPrice = bcadd((string) $reservation->price_snapshot, '0', 2);
-        // Average nightly rate × stayed nights; the last half-cent goes to the guest.
-        $stayedPrice = bcdiv(bcmul($bookedPrice, (string) $stayedNights, 4), (string) $bookedNights, 2);
         $actualCheckOut = $checkIn->addDays($stayedNights);
+        $bookedPrice = bcadd((string) $reservation->price_snapshot, '0', 2);
+        $extensions = $this->extensions->allForReservation($reservation->id);
+
+        // Originally booked segment: [check_in, first extension's start).
+        $extensionsTotal = $extensions->reduce(fn (string $sum, $e) => bcadd($sum, (string) $e->amount, 2), '0.00');
+        $baseCheckOut = $extensions->isEmpty()
+            ? $bookedCheckOut
+            : CarbonImmutable::parse($extensions->first()->previous_check_out->toDateString());
+        $baseNights = max((int) $checkIn->diffInDays($baseCheckOut), 1);
+        $basePrice = bcsub($bookedPrice, $extensionsTotal, 2);
+        $baseNightsUsed = min($stayedNights, $baseNights);
+        // Last half-cent of a non-even rate goes to the guest.
+        $stayedPrice = bcdiv(bcmul($basePrice, (string) $baseNightsUsed, 4), (string) $baseNights, 2);
+
+        foreach ($extensions as $extension) {
+            $segmentStart = CarbonImmutable::parse($extension->previous_check_out->toDateString());
+            $used = min(max((int) $segmentStart->diffInDays($actualCheckOut, false), 0), (int) $extension->nights_added);
+
+            $stayedPrice = bcadd($stayedPrice, bcmul((string) $extension->unit_price, (string) $used, 2), 2);
+            $this->folioCharges->shortenStayExtensionCharge($extension->id, $used, $actor);
+        }
 
         $this->reservations->update($reservation, [
             'checked_out_at' => $now,

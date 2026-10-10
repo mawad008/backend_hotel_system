@@ -104,6 +104,13 @@ class IdentityVerificationResource extends JsonResource
             ),
             // The OCR document check of the current attempt: status + reason
             // codes only — never an extracted or entered value.
+            // Which images of the current attempt staff can open (via
+            // /identity-verification/{reservation}/images/{kind}).
+            'images' => $this->when($this->staffDetail, fn () => [
+                'document' => filled($this->latestAttempt?->document_path),
+                'document_back' => filled($this->latestAttempt?->document_back_path),
+                'selfie' => filled($this->latestAttempt?->selfie_path),
+            ]),
             'document_check' => $this->when(
                 $this->latestAttempt?->document_check_status !== null,
                 fn () => $this->documentCheck(),

@@ -339,4 +339,71 @@ class IdentityVerificationApiTest extends TestCase
             ->assertStatus(422)
             ->assertJsonValidationErrors(['simulate']);
     }
+
+    // ── Staff image viewer ─────────────────────────────────────────
+
+    public function test_staff_can_view_the_uploaded_id_image_and_each_view_is_audited(): void
+    {
+        $owner = $this->owner();
+        $reservation = $this->reservation();
+        $this->postDocument($owner, $reservation)->assertStatus(201);
+
+        $this->actingAs($owner, 'sanctum')
+            ->getJson("/api/v1/identity-verification/{$reservation->id}/status")
+            ->assertOk()
+            ->assertJsonPath('data.images.document', true)
+            ->assertJsonPath('data.images.document_back', false)
+            ->assertJsonPath('data.images.selfie', false);
+
+        $response = $this->actingAs($owner, 'sanctum')
+            ->get("/api/v1/identity-verification/{$reservation->id}/images/document")
+            ->assertOk()
+            ->assertHeader('Content-Type', 'image/jpeg')
+            ->assertHeader('X-Content-Type-Options', 'nosniff');
+        $this->assertStringContainsString('no-store', (string) $response->headers->get('Cache-Control'));
+        $this->assertStringStartsWith("\xFF\xD8\xFF", $response->getContent(), 'decrypted JPEG bytes');
+
+        $this->assertDatabaseHas('audit_logs', [
+            'actor_id' => $owner->id,
+            'action' => 'identity_verification.image_viewed',
+        ]);
+    }
+
+    public function test_an_image_that_was_not_uploaded_is_a_404(): void
+    {
+        $owner = $this->owner();
+        $reservation = $this->reservation();
+
+        $this->actingAs($owner, 'sanctum')
+            ->get("/api/v1/identity-verification/{$reservation->id}/images/document")
+            ->assertNotFound();
+
+        $this->postDocument($owner, $reservation)->assertStatus(201);
+        $this->actingAs($owner, 'sanctum')
+            ->get("/api/v1/identity-verification/{$reservation->id}/images/selfie")
+            ->assertNotFound();
+    }
+
+    public function test_image_viewer_is_hotel_scoped_and_kind_restricted(): void
+    {
+        $owner = $this->owner();
+        $reservation = $this->reservation();
+        $this->get("/api/v1/identity-verification/{$reservation->id}/images/document", ['Accept' => 'application/json'])
+            ->assertUnauthorized();
+        $this->postDocument($owner, $reservation)->assertStatus(201);
+
+        $manager = User::factory()->hotelManager()->create();
+        $manager->hotels()->attach(Hotel::factory()->create());
+        $this->actingAs($manager, 'sanctum')
+            ->get("/api/v1/identity-verification/{$reservation->id}/images/document")
+            ->assertNotFound();
+
+        $this->actingAs(User::factory()->guest()->create(), 'sanctum')
+            ->get("/api/v1/identity-verification/{$reservation->id}/images/document")
+            ->assertNotFound();
+
+        $this->actingAs($owner, 'sanctum')
+            ->get("/api/v1/identity-verification/{$reservation->id}/images/..%2F..%2Fetc")
+            ->assertNotFound();
+    }
 }

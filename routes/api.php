@@ -487,6 +487,8 @@ Route::prefix('v1')->group(function () {
             Route::post('/selfie', [IdentityVerificationController::class, 'selfie'])
                 ->middleware('throttle:identity-verification.submit');
             Route::get('/status', [IdentityVerificationController::class, 'status']);
+            Route::get('/images/{kind}', [IdentityVerificationController::class, 'image'])
+                ->whereIn('kind', ['document', 'document_back', 'selfie']);
             Route::post('/review', [IdentityVerificationController::class, 'review']);
         });
 
