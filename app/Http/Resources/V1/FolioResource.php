@@ -3,6 +3,7 @@
 namespace App\Http\Resources\V1;
 
 use App\Domain\StayServices\Services\Folio;
+use App\Domain\StayServices\Services\SettlementSummary;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -38,6 +39,9 @@ class FolioResource extends JsonResource
                 'payments_total' => $folio->paymentsTotal,
                 'outstanding_total' => $folio->outstandingTotal,
             ],
+            // The full settlement (accommodation, services, fee, tax, deposit…),
+            // complete before checkout too — see SettlementSummary.
+            'settlement' => SettlementSummary::of($folio),
             'payment_summary' => $folio->payment === null ? null : [
                 'status' => $folio->payment->status,
                 'amount' => $folio->payment->amount,

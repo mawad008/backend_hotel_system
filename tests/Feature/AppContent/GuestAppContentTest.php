@@ -125,6 +125,57 @@ class GuestAppContentTest extends TestCase
         ])->assertUnprocessable()->assertJsonValidationErrors(['slot', 'image']);
     }
 
+    public function test_owner_sets_brand_colour_contacts_and_legal_links(): void
+    {
+        $this->actingAs($this->owner(), 'sanctum')->patchJson('/api/v1/app-content', [
+            'primary_color' => '#1a2b3c',
+            'support_phone' => ' +20 100 123 4567 ',
+            'support_whatsapp' => '+201001234567',
+            'support_email' => 'help@oasis.test',
+            'website_url' => 'https://oasis.test',
+            'terms_url' => 'https://oasis.test/terms',
+            'privacy_url' => '',
+        ])->assertOk()->assertJsonPath('data.primary_color', '#1A2B3C');
+
+        $this->getJson('/api/v1/guest/app-content')
+            ->assertOk()
+            ->assertJsonPath('data.support.phone', '+20 100 123 4567')
+            ->assertJsonPath('data.support.whatsapp', '+201001234567')
+            ->assertJsonPath('data.support.email', 'help@oasis.test')
+            ->assertJsonPath('data.support.website', 'https://oasis.test')
+            ->assertJsonPath('data.legal.terms_url', 'https://oasis.test/terms')
+            // Blank clears it — the app hides that link.
+            ->assertJsonPath('data.legal.privacy_url', null);
+    }
+
+    public function test_settings_validation_rejects_bad_colour_phone_email_and_url(): void
+    {
+        $this->actingAs($this->owner(), 'sanctum')->patchJson('/api/v1/app-content', [
+            'primary_color' => 'red',
+            'support_phone' => 'call me',
+            'support_email' => 'not-an-email',
+            'terms_url' => 'javascript:alert(1)',
+        ])->assertUnprocessable()->assertJsonValidationErrors([
+            'primary_color', 'support_phone', 'support_email', 'terms_url',
+        ]);
+    }
+
+    public function test_app_icon_must_be_square_and_is_served_by_url(): void
+    {
+        $owner = $this->owner();
+
+        $this->actingAs($owner, 'sanctum')->postJson('/api/v1/app-content/images', [
+            'slot' => 'app_icon', 'image' => UploadedFile::fake()->image('wide.png', 512, 256),
+        ])->assertUnprocessable()->assertJsonValidationErrors(['image']);
+
+        $this->actingAs($owner, 'sanctum')->postJson('/api/v1/app-content/images', [
+            'slot' => 'app_icon', 'image' => UploadedFile::fake()->image('icon.png', 512, 512),
+        ])->assertOk();
+
+        $this->assertStringStartsWith('guest-app/app_icon/', (string) GuestAppContent::firstOrFail()->app_icon_path);
+        $this->assertNotNull($this->getJson('/api/v1/guest/app-content')->json('data.app_icon_url'));
+    }
+
     public function test_staff_without_permission_is_forbidden(): void
     {
         $manager = User::factory()->hotelManager()->create();

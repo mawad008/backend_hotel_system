@@ -22,9 +22,16 @@ class UploadGuestAppImageRequest extends FormRequest
         $maxKb = (int) config('hotel_media.max_file_kb', 5120);
         $mimes = implode(',', (array) config('hotel_media.mimes', ['jpg', 'jpeg', 'png', 'webp']));
 
+        $image = ['required', 'file', 'image', 'mimes:'.$mimes, 'max:'.$maxKb];
+
+        // The app icon is a square launcher-style icon (favicon / home screen).
+        if ($this->input('slot') === GuestAppContent::IMAGE_APP_ICON) {
+            $image[] = 'dimensions:ratio=1,min_width=192';
+        }
+
         return [
             'slot' => ['required', 'string', Rule::in(GuestAppContent::IMAGE_SLOTS)],
-            'image' => ['required', 'file', 'image', 'mimes:'.$mimes, 'max:'.$maxKb],
+            'image' => $image,
         ];
     }
 

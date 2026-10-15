@@ -18,6 +18,14 @@ use Illuminate\Http\Resources\Json\JsonResource;
  */
 class SettlementResource extends JsonResource
 {
+    /**
+     * @param  array<string, mixed>|null  $settlement  SettlementSummary::of() for the row's folio
+     */
+    public function __construct($resource, private readonly ?array $settlement = null)
+    {
+        parent::__construct($resource);
+    }
+
     public function toArray(Request $request): array
     {
         return [
@@ -29,6 +37,9 @@ class SettlementResource extends JsonResource
             'payments_total' => $this->payments_total,
             'outstanding_total' => $this->outstanding_total,
             'currency' => $this->currency,
+            // The full settlement (accommodation, services, fee, tax, deposit…)
+            // — the bare totals above are the folio's posted charges only.
+            'settlement' => $this->when($this->settlement !== null, fn () => $this->settlement),
             'started_at' => $this->started_at,
             'completed_at' => $this->completed_at,
         ];

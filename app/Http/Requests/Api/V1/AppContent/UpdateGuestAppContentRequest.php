@@ -8,7 +8,8 @@ use Illuminate\Foundation\Http\FormRequest;
 /**
  * Validation for PATCH /app-content. Every text field is an optional
  * `{"en","ar"}` map; a blank/omitted locale falls back to the app's bundled
- * copy. Authorization is enforced in the controller (GuestAppContentPolicy).
+ * copy. Settings (brand colour, contacts, legal links) are plain optional
+ * strings; blank clears them. Authorization is enforced in the controller (GuestAppContentPolicy).
  */
 class UpdateGuestAppContentRequest extends FormRequest
 {
@@ -43,6 +44,16 @@ class UpdateGuestAppContentRequest extends FormRequest
                 $rules["faq.*.{$field}.{$locale}"] = ['nullable', 'string', 'max:'.$max];
             }
         }
+
+        $phone = ['sometimes', 'nullable', 'string', 'max:30', 'regex:/^\+?[0-9][0-9 ()\-]{4,28}$/'];
+        $url = ['sometimes', 'nullable', 'string', 'max:500', 'url:http,https'];
+        $rules['primary_color'] = ['sometimes', 'nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'];
+        $rules['support_phone'] = $phone;
+        $rules['support_whatsapp'] = $phone;
+        $rules['support_email'] = ['sometimes', 'nullable', 'string', 'max:190', 'email'];
+        $rules['website_url'] = $url;
+        $rules['terms_url'] = $url;
+        $rules['privacy_url'] = $url;
 
         return $rules;
     }

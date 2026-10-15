@@ -47,6 +47,23 @@ class SettlementLedgerApiTest extends TestCase
         $this->assertNotNull($response->json('data.0.hotel_id'));
     }
 
+    public function test_each_row_carries_the_full_settlement_not_only_services(): void
+    {
+        $hotel = Hotel::factory()->create(['hotel_group_id' => HotelGroup::factory()->create()->id]);
+        $manager = $this->hotelManagerFor($hotel);
+        $checkout = $this->checkoutFor($hotel, Checkout::STATUS_IN_PROGRESS);
+        $checkout->reservation->update(['price_snapshot' => '500.00', 'service_fee_amount' => '0.00', 'tax_rate' => '0.00']);
+
+        $this->actingAs($manager, 'sanctum')
+            ->getJson("/api/v1/hotels/{$hotel->id}/settlements")
+            ->assertOk()
+            ->assertJsonPath('data.0.settlement.accommodation', '500.00')
+            ->assertJsonPath('data.0.settlement.services', '0.00')
+            ->assertJsonPath('data.0.settlement.total', '500.00')
+            ->assertJsonPath('data.0.settlement.deposit.state', 'none')
+            ->assertJsonPath('data.0.settlement.balance_due', '500.00');
+    }
+
     public function test_staff_can_filter_by_status(): void
     {
         $hotel = Hotel::factory()->create(['hotel_group_id' => HotelGroup::factory()->create()->id]);

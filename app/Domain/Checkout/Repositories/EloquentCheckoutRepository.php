@@ -11,6 +11,7 @@ class EloquentCheckoutRepository implements CheckoutRepositoryInterface
     public function paginateForHotel(int $hotelId, array $filters, int $perPage): LengthAwarePaginator
     {
         return Checkout::query()
+            ->with('reservation')
             ->where('hotel_id', $hotelId)
             ->when(($filters['status'] ?? null) !== null, fn ($q) => $q->where('status', $filters['status']))
             ->latest()

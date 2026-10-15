@@ -26,11 +26,28 @@ class GuestAppContentResource extends JsonResource
             'app_name_i18n' => $this->app_name_i18n,
             'logo_url' => $this->logoUrl(),
             'onboarding_image_url' => $this->onboardingImageUrl(),
+            // Square icon: web favicon / home-screen icon (native launcher
+            // icons are build-time and cannot follow it).
+            'app_icon_url' => $this->appIconUrl(),
+            // `#RRGGBB` — the app's primary (buttons, accents) colour.
+            'primary_color' => $this->primary_color,
             'onboarding_title_i18n' => $this->onboarding_title_i18n,
             'onboarding_body_i18n' => $this->onboarding_body_i18n,
             'onboarding_cta_i18n' => $this->onboarding_cta_i18n,
             // PROFILE_Support FAQ — ordered, both locales per entry.
             'faq' => $this->faq ?? [],
+            // PROFILE_Support contact actions; null = that action is hidden.
+            'support' => [
+                'phone' => $this->support_phone,
+                'whatsapp' => $this->support_whatsapp,
+                'email' => $this->support_email,
+                'website' => $this->website_url,
+            ],
+            // Linked from sign-in ("by continuing you agree…") and Account.
+            'legal' => [
+                'terms_url' => $this->terms_url,
+                'privacy_url' => $this->privacy_url,
+            ],
             'updated_at' => $this->updated_at,
         ];
     }

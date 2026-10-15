@@ -30,18 +30,26 @@ class GuestAppContentService
     }
 
     /**
-     * @param  array<string, mixed>  $data  only GuestAppContent::TEXT_FIELDS
+     * @param  array<string, mixed>  $data  GuestAppContent::TEXT_FIELDS, SETTING_FIELDS and `faq`
      */
     public function updateText(array $data, ?User $actor): GuestAppContent
     {
         return DB::transaction(function () use ($data, $actor) {
             $content = $this->contents->current();
-            $before = $content->only(GuestAppContent::TEXT_FIELDS);
+            $before = $content->only([...GuestAppContent::TEXT_FIELDS, ...GuestAppContent::SETTING_FIELDS]);
 
             $clean = [];
             foreach (GuestAppContent::TEXT_FIELDS as $field) {
                 if (array_key_exists($field, $data)) {
                     $clean[$field] = $this->normalizeMap($data[$field]);
+                }
+            }
+
+            foreach (GuestAppContent::SETTING_FIELDS as $field) {
+                if (array_key_exists($field, $data)) {
+                    $value = is_string($data[$field]) ? trim($data[$field]) : '';
+                    $clean[$field] = $value === '' ? null
+                        : ($field === 'primary_color' ? strtoupper($value) : $value);
                 }
             }
 
@@ -57,7 +65,7 @@ class GuestAppContentService
                 'guest-app-content.updated',
                 $content,
                 before: $before,
-                after: $content->only([...GuestAppContent::TEXT_FIELDS, 'faq']),
+                after: $content->only([...GuestAppContent::TEXT_FIELDS, ...GuestAppContent::SETTING_FIELDS, 'faq']),
             );
 
             return $content;

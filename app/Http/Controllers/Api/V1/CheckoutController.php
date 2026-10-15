@@ -6,6 +6,8 @@ use App\Domain\Checkout\Models\Checkout;
 use App\Domain\Checkout\Services\CheckoutService;
 use App\Domain\HotelGroup\Models\Hotel;
 use App\Domain\Reservation\Services\ReservationService;
+use App\Domain\StayServices\Services\FolioService;
+use App\Domain\StayServices\Services\SettlementSummary;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Checkout\IndexSettlementRequest;
 use App\Http\Requests\Api\V1\Checkout\PerformCheckoutRequest;
@@ -31,6 +33,7 @@ class CheckoutController extends Controller
     public function __construct(
         private readonly ReservationService $reservations,
         private readonly CheckoutService $checkouts,
+        private readonly FolioService $folios,
     ) {}
 
     /**
@@ -76,13 +79,21 @@ class CheckoutController extends Controller
     /**
      * GET /api/v1/hotels/{hotel}/settlements
      *
-     * The staff settlements ledger for one hotel.
+     * The staff settlements ledger for one hotel. Each row carries the
+     * guest's full settlement (accommodation, services, deposit, balance
+     * due / released) from the same FolioService::folioFor() +
+     * SettlementSummary the reservation-scoped folio uses — computed per
+     * row of the bounded page, like the folio ledger.
      */
     public function index(IndexSettlementRequest $request, Hotel $hotel): JsonResponse
     {
         $this->authorize('viewLedger', [Checkout::class, $hotel]);
 
         $settlements = $this->checkouts->listForHotel($hotel->id, $request->filters(), $request->perPage());
+        $settlements->setCollection(collect($settlements->items())->map(fn (Checkout $checkout) => new SettlementResource(
+            $checkout,
+            SettlementSummary::of($this->folios->folioFor($checkout->reservation)),
+        )));
 
         return $this->success(SettlementResource::collection($settlements), __('api.checkout.settlements_ledger'));
     }
