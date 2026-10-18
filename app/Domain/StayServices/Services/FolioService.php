@@ -83,12 +83,12 @@ class FolioService
      * caller is expected to call folioFor() on each row of the returned
      * (bounded, paginated) page to render the authoritative totals.
      *
-     * @param  array{search?: string|null, outstanding_only?: bool}  $filters
+     * @param  array{search?: string|null, outstanding_only?: bool, sort?: string|null}  $filters
      * @return LengthAwarePaginator<Reservation>
      */
     public function listForHotel(int $hotelId, array $filters, int $perPage): LengthAwarePaginator
     {
-        $listFilters = ['search' => $filters['search'] ?? null];
+        $listFilters = ['search' => $filters['search'] ?? null, 'sort' => $filters['sort'] ?? null];
 
         if (! empty($filters['outstanding_only'])) {
             $listFilters['reservation_ids'] = $this->outstandingReservationIdsForHotel($hotelId);
@@ -98,25 +98,33 @@ class FolioService
     }
 
     /**
-     * Reservation ids of $hotelId whose charges_total (OWED_STATUSES)
-     * exceeds their collected payments_total (COLLECTED_TYPES, succeeded)
-     * — the exact folioFor() formula, evaluated for every reservation via
-     * two grouped SUMs instead of N folioFor() calls.
+     * Reservation ids of $hotelId whose settlement total (accommodation +
+     * fee + tax from the snapshots, plus posted service/loyalty lines —
+     * SettlementSummary::totalFor) exceeds their collected payments_total
+     * (COLLECTED_TYPES, succeeded). Using the settlement total rather than
+     * charges_total keeps in-stay bookings right: their accommodation, fee
+     * and tax are only posted at checkout. One reservation read plus two
+     * grouped SUMs, never N folioFor() calls.
      *
      * @return list<int>
      */
     private function outstandingReservationIdsForHotel(int $hotelId): array
     {
-        $chargesByReservation = $this->charges->sumsGroupedByReservationForHotel($hotelId, FolioCharge::OWED_STATUSES);
+        $adjustmentsByReservation = $this->charges->sumsGroupedByReservationForHotel(
+            $hotelId,
+            FolioCharge::OWED_STATUSES,
+            [FolioCharge::SOURCE_SERVICE_ORDER, FolioCharge::SOURCE_LOYALTY_REDEMPTION],
+        );
         $paymentsByReservation = $this->paymentTransactions->collectedSumsGroupedByReservationForHotel($hotelId);
 
         $ids = [];
 
-        foreach ($chargesByReservation as $reservationId => $chargesTotal) {
-            $paid = $paymentsByReservation[$reservationId] ?? '0.00';
+        foreach ($this->reservations->settlementBasesForHotel($hotelId) as $reservation) {
+            $total = SettlementSummary::totalFor($reservation, $adjustmentsByReservation[$reservation->id] ?? '0.00');
+            $paid = $paymentsByReservation[$reservation->id] ?? '0.00';
 
-            if (bccomp($chargesTotal, $paid, 2) > 0) {
-                $ids[] = (int) $reservationId;
+            if (bccomp($total, $paid, 2) > 0) {
+                $ids[] = $reservation->id;
             }
         }
 

@@ -179,9 +179,21 @@ interface ReservationRepositoryInterface
      * — the folio ledger's "outstanding only" filter, computed by
      * FolioService from the authoritative charge/payment totals.
      *
-     * @param  array{search?: string|null, reservation_ids?: list<int>}  $filters
+     * `sort` is a whitelisted column with an optional `-` (descending)
+     * prefix; default `-check_in`.
+     *
+     * @param  array{search?: string|null, reservation_ids?: list<int>, sort?: string|null}  $filters
      */
     public function paginateForFolioLedger(int $hotelId, array $filters, int $perPage): LengthAwarePaginator;
+
+    /**
+     * Every folio-ledger reservation of $hotelId (same scope as
+     * paginateForFolioLedger), with only the columns the settlement total
+     * needs: id, price_snapshot, service_fee_amount, tax_rate.
+     *
+     * @return Collection<int, Reservation>
+     */
+    public function settlementBasesForHotel(int $hotelId): Collection;
 
     /**
      * Reservation counts by status for $hotelId whose check_in falls in

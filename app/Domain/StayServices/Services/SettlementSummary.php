@@ -80,7 +80,7 @@ final class SettlementSummary
         // Stored as a negative line; reported as a positive discount.
         $loyaltyDiscount = bcmul($sum(FolioCharge::SOURCE_LOYALTY_REDEMPTION), '-1', 2);
 
-        $total = bcsub(bcadd(bcadd(bcadd($accommodation, $services, 2), $serviceFee, 2), $tax, 2), $loyaltyDiscount, 2);
+        $total = self::totalFor($reservation, bcsub($services, $loyaltyDiscount, 2));
         $paid = bcadd($folio->paymentsTotal, '0', 2);
         $remaining = self::max0(bcsub($total, $paid, 2));
 
@@ -135,6 +135,20 @@ final class SettlementSummary
             // false = a projection: the guest has not checked out yet.
             'is_final' => in_array($reservation->status, [Reservation::STATUS_CHECKED_OUT, Reservation::STATUS_INVOICED], true),
         ];
+    }
+
+    /**
+     * The guest's full bill: accommodation + service fee + tax from the
+     * reservation's snapshots, plus the posted service-order and loyalty
+     * lines ($postedAdjustments = their signed sum). The folio ledger's
+     * "outstanding only" filter uses this too, so both always agree.
+     */
+    public static function totalFor(Reservation $reservation, string $postedAdjustments): string
+    {
+        $accommodation = bcadd((string) ($reservation->price_snapshot ?? '0'), '0', 2);
+        $serviceFee = bcadd((string) ($reservation->service_fee_amount ?? '0'), '0', 2);
+
+        return bcadd(bcadd(bcadd($accommodation, $serviceFee, 2), $reservation->taxAmount(), 2), $postedAdjustments, 2);
     }
 
     private static function max0(string $amount): string

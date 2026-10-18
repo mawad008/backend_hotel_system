@@ -185,7 +185,23 @@ class EloquentReservationRepository implements ReservationRepositoryInterface
             });
         }
 
-        return $query->orderByDesc('check_in')->paginate($perPage)->withQueryString();
+        // `sort` is whitelisted by IndexFolioRequest; id breaks date ties.
+        $sort = $filters['sort'] ?? '-check_in';
+        $query->orderBy(ltrim($sort, '-'), str_starts_with($sort, '-') ? 'desc' : 'asc');
+
+        if (ltrim($sort, '-') !== 'id') {
+            $query->orderByDesc('id');
+        }
+
+        return $query->paginate($perPage)->withQueryString();
+    }
+
+    public function settlementBasesForHotel(int $hotelId): Collection
+    {
+        return Reservation::query()
+            ->where('hotel_id', $hotelId)
+            ->where('status', '!=', Reservation::STATUS_CANCELLED)
+            ->get(['id', 'price_snapshot', 'service_fee_amount', 'tax_rate']);
     }
 
     public function countsByStatusForHotel(int $hotelId, string $from, string $to): array

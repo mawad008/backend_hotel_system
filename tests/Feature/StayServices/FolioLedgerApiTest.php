@@ -31,6 +31,10 @@ class FolioLedgerApiTest extends TestCase
             'hotel_id' => $hotel->id, 'room_type_id' => $roomType->id,
             'status' => Reservation::STATUS_IN_STAY,
             'guest_id' => ($guest ?? Guest::factory()->create())->id,
+            // Only the posted line counts toward the bill in these tests.
+            'price_snapshot' => '0.00',
+            'service_fee_amount' => '0.00',
+            'tax_rate' => '0.00',
         ]);
         FolioCharge::factory()->amount($amount, 1)->create([
             'reservation_id' => $reservation->id, 'hotel_id' => $hotel->id, 'source_id' => $sourceId++,
@@ -78,6 +82,57 @@ class FolioLedgerApiTest extends TestCase
         $response->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.reservation.id', $unpaid->id)
             ->assertJsonPath('data.0.totals.outstanding_total', '40.00');
+    }
+
+    public function test_outstanding_only_counts_the_unposted_stay_of_an_in_stay_booking(): void
+    {
+        $hotel = Hotel::factory()->create(['hotel_group_id' => HotelGroup::factory()->create()->id]);
+        $manager = $this->hotelManagerFor($hotel);
+        $roomType = RoomType::factory()->create(['hotel_id' => $hotel->id]);
+
+        // Accommodation, fee and tax are only posted at checkout, and the
+        // loyalty credit is a negative line — charges_total alone is -100.
+        $inStay = Reservation::factory()->create([
+            'hotel_id' => $hotel->id, 'room_type_id' => $roomType->id,
+            'status' => Reservation::STATUS_IN_STAY,
+            'price_snapshot' => '1320.00', 'service_fee_amount' => '0.00', 'tax_rate' => '0.00',
+        ]);
+        FolioCharge::factory()->amount('-100.00', 1)->create([
+            'reservation_id' => $inStay->id, 'hotel_id' => $hotel->id,
+            'source_type' => FolioCharge::SOURCE_LOYALTY_REDEMPTION, 'source_id' => $inStay->id,
+        ]);
+
+        $this->actingAs($manager, 'sanctum')
+            ->getJson("/api/v1/hotels/{$hotel->id}/folios?outstanding=1")
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.reservation.id', $inStay->id)
+            ->assertJsonPath('data.0.settlement.total', '1220.00');
+    }
+
+    public function test_ledger_sorts_by_reservation_number_by_default_and_on_request(): void
+    {
+        $hotel = Hotel::factory()->create(['hotel_group_id' => HotelGroup::factory()->create()->id]);
+        $manager = $this->hotelManagerFor($hotel);
+        $first = $this->reservationWithCharge($hotel, '10.00');
+        $second = $this->reservationWithCharge($hotel, '10.00');
+        $first->update(['check_in' => now()->addDays(5)->toDateString(), 'check_out' => now()->addDays(6)->toDateString()]);
+        $second->update(['check_in' => now()->addDays(1)->toDateString(), 'check_out' => now()->addDays(2)->toDateString()]);
+        $url = "/api/v1/hotels/{$hotel->id}/folios";
+
+        $this->actingAs($manager, 'sanctum')->getJson($url)->assertOk()
+            ->assertJsonPath('data.0.reservation.id', $second->id);
+
+        $this->getJson("{$url}?sort=id")->assertOk()
+            ->assertJsonPath('data.0.reservation.id', $first->id);
+
+        $this->getJson("{$url}?sort=check_in")->assertOk()
+            ->assertJsonPath('data.0.reservation.id', $second->id);
+
+        $this->getJson("{$url}?sort=-check_out")->assertOk()
+            ->assertJsonPath('data.0.reservation.id', $first->id);
+
+        $this->getJson("{$url}?sort=guest_id")->assertUnprocessable();
     }
 
     public function test_search_matches_guest_name(): void

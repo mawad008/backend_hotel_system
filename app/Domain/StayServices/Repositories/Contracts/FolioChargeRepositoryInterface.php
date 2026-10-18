@@ -44,9 +44,10 @@ interface FolioChargeRepositoryInterface
      * single grouped aggregate, never one query per reservation).
      *
      * @param  list<string>  $statuses
+     * @param  list<string>|null  $sourceTypes  null = every source
      * @return array<int, string> reservation_id => decimal-string sum
      */
-    public function sumsGroupedByReservationForHotel(int $hotelId, array $statuses): array;
+    public function sumsGroupedByReservationForHotel(int $hotelId, array $statuses, ?array $sourceTypes = null): array;
 
     /**
      * @param  array<string, mixed>  $data

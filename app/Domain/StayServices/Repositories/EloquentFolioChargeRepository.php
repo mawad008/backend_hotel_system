@@ -56,7 +56,7 @@ class EloquentFolioChargeRepository implements FolioChargeRepositoryInterface
         return bcadd((string) $sum, '0', 2);
     }
 
-    public function sumsGroupedByReservationForHotel(int $hotelId, array $statuses): array
+    public function sumsGroupedByReservationForHotel(int $hotelId, array $statuses, ?array $sourceTypes = null): array
     {
         if ($statuses === []) {
             return [];
@@ -65,6 +65,7 @@ class EloquentFolioChargeRepository implements FolioChargeRepositoryInterface
         return FolioCharge::query()
             ->where('hotel_id', $hotelId)
             ->whereIn('status', $statuses)
+            ->when($sourceTypes !== null, fn ($q) => $q->whereIn('source_type', $sourceTypes))
             ->groupBy('reservation_id')
             ->selectRaw('reservation_id, COALESCE(SUM(total_amount), 0) as aggregate')
             ->pluck('aggregate', 'reservation_id')
