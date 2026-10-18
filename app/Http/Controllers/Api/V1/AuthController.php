@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Domain\HotelGroup\Models\Hotel;
+use App\Domain\IdentityAccess\Models\User;
 use App\Domain\IdentityAccess\Services\AuthService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Auth\LoginRequest;
@@ -21,7 +23,7 @@ class AuthController extends Controller
         );
 
         return $this->success([
-            'user' => new UserResource($result['user']->load(['role.permissions', 'hotels'])),
+            'user' => new UserResource($this->withSessionRelations($result['user'])),
             'token' => $result['token'],
         ], __('api.login_success'));
     }
@@ -36,7 +38,23 @@ class AuthController extends Controller
     public function me(Request $request): JsonResponse
     {
         return $this->success(
-            new UserResource($request->user()->load(['role.permissions', 'hotels'])),
+            new UserResource($this->withSessionRelations($request->user())),
         );
+    }
+
+    /**
+     * A Group Owner has no user_hotel_access rows — they reach every hotel
+     * by bypass (HotelAccessService::canAccessHotel) — so expose every hotel
+     * as their session hotels for the dashboard's hotel picker.
+     */
+    private function withSessionRelations(User $user): User
+    {
+        $user->load('role.permissions');
+
+        if ($user->isGroupOwner()) {
+            return $user->setRelation('hotels', Hotel::query()->orderBy('id')->get());
+        }
+
+        return $user->load('hotels');
     }
 }
