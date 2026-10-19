@@ -30,6 +30,27 @@ class TransitionReservationRequest extends FormRequest
     {
         return [
             'target_status' => ['required', 'string', Rule::in(ReservationStateMachine::statuses())],
+            // Why staff moved it (cancellation reason, identity override note).
+            'reason' => ['sometimes', 'nullable', 'string', 'max:500'],
+            // Header-only, like a payment hold: a double-clicked "move to"
+            // replays the underlying hold / check-in / checkout.
+            'idempotency_key' => ['sometimes', 'filled', 'string', 'max:255', 'regex:/^[A-Za-z0-9._:\-]+$/'],
         ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        $key = $this->header('Idempotency-Key');
+
+        if ($key !== null) {
+            $this->merge(['idempotency_key' => $key]);
+        }
+    }
+
+    public function idempotencyKey(): ?string
+    {
+        $key = $this->validated('idempotency_key');
+
+        return is_string($key) && $key !== '' ? $key : null;
     }
 }

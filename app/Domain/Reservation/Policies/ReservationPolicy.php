@@ -72,6 +72,18 @@ class ReservationPolicy
     }
 
     /**
+     * Management override: move a reservation to its next status by running
+     * the real flow for that step (deposit, identity, check-in, checkout)
+     * from the dashboard. Its own permission — it stands in for actions the
+     * guest normally takes in the app.
+     */
+    public function advance(User $user, Reservation $reservation): bool
+    {
+        return $user->hasPermission('reservations.override')
+            && $this->hotelAccess->canAccessHotel($user, $reservation->hotel_id);
+    }
+
+    /**
      * Extend Stay is a Reservation mutation like a status transition, so it
      * takes the same permission + hotel-scope shape as transition().
      * Eligibility (checked_in/in_stay only) and availability are business

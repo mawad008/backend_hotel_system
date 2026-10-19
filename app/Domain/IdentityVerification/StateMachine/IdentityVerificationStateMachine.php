@@ -140,4 +140,27 @@ final class IdentityVerificationStateMachine
             throw new InvalidIdentityVerificationStatusTransitionException($from, $to);
         }
     }
+
+    /**
+     * Management override (dashboard "move to Verified"): staff approve the
+     * guest's identity without the document/selfie flow. Deliberately kept
+     * OUT of TRANSITIONS — the approved diagram is unchanged — as one
+     * explicit, separately audited path: any non-terminal status may be
+     * overridden to STAFF_APPROVED. An already-approved (terminal) session
+     * never is.
+     */
+    public static function canOverrideApprove(string $from): bool
+    {
+        return array_key_exists($from, self::TRANSITIONS) && ! self::isTerminal($from);
+    }
+
+    /**
+     * @throws InvalidIdentityVerificationStatusTransitionException
+     */
+    public static function assertCanOverrideApprove(string $from): void
+    {
+        if (! self::canOverrideApprove($from)) {
+            throw new InvalidIdentityVerificationStatusTransitionException($from, IdentityVerificationSession::STATUS_STAFF_APPROVED);
+        }
+    }
 }

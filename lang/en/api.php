@@ -50,6 +50,7 @@ return [
     'reservation' => [
         'cancellation_not_allowed' => 'This reservation can no longer be cancelled under its cancellation policy.',
         'refund_failed' => 'The deposit could not be released right now, so the reservation was not cancelled. Please try again.',
+        'step_incomplete' => 'The step ran but did not complete, so the reservation stayed where the flow left it.',
         'check_in_mode_disallows' => 'Check-in for this hotel is not available through this channel.',
         'room_not_assigned' => 'Your room is being prepared — check-in opens once reception assigns it.',
         'deposit_not_required' => 'No deposit is required for this hotel; the reservation is confirmed.',

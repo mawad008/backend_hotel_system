@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\V1\Guest;
 use App\Domain\Payment\Models\Payment;
 use App\Domain\Payment\Services\PaymentWorkflowService;
 use App\Domain\Reservation\Models\Guest;
-use App\Domain\Reservation\Models\Reservation;
 use App\Domain\Reservation\Services\ReservationService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\Guest\InitiateGuestPaymentHoldRequest;
@@ -64,33 +63,17 @@ class GuestPaymentController extends Controller
             abort(404);
         }
 
-        $percentage = $found->hotel()->value('deposit_percentage');
-
-        if ($percentage === null) {
-            return $this->error(
-                __('api.guest_booking.deposit_rule_undefined'),
-                422,
-                ['reason' => 'deposit_amount_rule_undefined'],
-            );
-        }
+        // One deposit rule for the app and the dashboard
+        // (PaymentWorkflowService::holdDeposit): the hotel's percentage of the
+        // stay price, in the reservation's snapshotted currency. An undefined
+        // rule renders as 422 `deposit_amount_rule_undefined`.
+        $payment = $this->payments->holdDeposit($found, $request->idempotencyKey());
 
         // A 0% deposit hotel takes no hold: the reservation is confirmed
         // straight away (payment confirms, it never starts the stay).
-        if (bccomp((string) $percentage, '0', 2) === 0) {
-            if ($found->status === Reservation::STATUS_PENDING) {
-                $found = $this->reservations->transitionTo($found, Reservation::STATUS_DEPOSIT_HELD);
-            }
-
+        if ($payment === null) {
             return $this->success(null, __('api.reservation.deposit_not_required'), 200, ['deposit_required' => false]);
         }
-
-        $payment = $this->payments->initiateHold(
-            reservation: $found,
-            amount: $found->hotel->depositFor((string) $found->price_snapshot),
-            // The reservation's snapshotted currency, never today's config.
-            currency: $found->currency,
-            idempotencyKey: $request->idempotencyKey(),
-        );
 
         return $this->respond($payment);
     }

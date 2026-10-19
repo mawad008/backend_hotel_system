@@ -767,6 +767,68 @@ class IdentityVerificationService
         });
     }
 
+    /**
+     * Management override — the dashboard moves a DEPOSIT_HELD reservation
+     * to VERIFIED without the guest's document/selfie flow. The outcome is
+     * the same as a staff approval (STAFF_APPROVED session + manual decision
+     * + reservation VERIFIED through ReservationService), so check-in and
+     * everything after it sees identity as approved exactly as in the app.
+     * Audited as its own action so an override is never mistaken for a
+     * reviewed approval. A session the provider already approved is simply
+     * reconciled.
+     *
+     * @throws IdentityVerificationNotAllowedException if the reservation is not DEPOSIT_HELD
+     */
+    public function overrideApprove(Reservation $reservation, User $actor, ?string $reason = null): IdentityVerificationSession
+    {
+        return DB::transaction(function () use ($reservation, $actor, $reason) {
+            $locked = $this->reservations->findForUpdate($reservation->id);
+
+            if (! $locked) {
+                throw (new ModelNotFoundException)->setModel(Reservation::class, [$reservation->id]);
+            }
+
+            $this->assertReservationReady($locked);
+
+            $session = $this->sessions->findByReservationForUpdate($locked->id)
+                ?? $this->createSession($locked, $actor);
+
+            if (! in_array($session->status, IdentityVerificationSession::APPROVED_STATUSES, true)) {
+                IdentityVerificationStateMachine::assertCanOverrideApprove($session->status);
+
+                $attempt = $this->attempts->latestForSession($session->id);
+
+                $session = $this->sessions->update($session, [
+                    'status' => IdentityVerificationSession::STATUS_STAFF_APPROVED,
+                    'decided_at' => now(),
+                ]);
+
+                $this->decisions->create([
+                    'session_id' => $session->id,
+                    'attempt_id' => $attempt?->id,
+                    'type' => IdentityVerificationDecision::TYPE_MANUAL,
+                    'result' => IdentityVerificationDecision::RESULT_STAFF_APPROVED,
+                    'decided_by_user_id' => $actor->id,
+                    'score' => $session->latest_score,
+                    'band' => null,
+                    'reason' => $reason ?? 'staff_override',
+                ]);
+
+                $this->auditLogger->record(
+                    $actor,
+                    'identity_verification.staff_override_approved',
+                    $session,
+                    after: $this->auditSnapshot($session, $attempt) + ['reason' => $reason],
+                    hotelId: $session->hotel_id,
+                );
+            }
+
+            $this->applyReservationVerified($locked, $session, $actor);
+
+            return $session;
+        });
+    }
+
     // ═════════════════════════════════════════════════════════════════════
     //  Internals
     // ═════════════════════════════════════════════════════════════════════

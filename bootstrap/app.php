@@ -37,6 +37,8 @@ use App\Domain\Payment\Exceptions\InvalidPaymentCurrencyException;
 use App\Domain\Payment\Exceptions\InvalidPaymentStatusTransitionException;
 use App\Domain\Payment\Exceptions\PaymentAlreadyInitiatedException;
 use App\Domain\Payment\Exceptions\PaymentHoldNotAllowedException;
+use App\Domain\Lifecycle\Exceptions\LifecycleStepIncompleteException;
+use App\Domain\Payment\Exceptions\DepositRuleUndefinedException;
 use App\Domain\Payment\Exceptions\PaymentRefundFailedException;
 use App\Domain\Payment\Exceptions\PaymentSettlementNotAllowedException;
 use App\Domain\Reservation\Exceptions\InvalidReservationStatusTransitionException;
@@ -225,6 +227,19 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->renderable(function (ReservationCancellationNotAllowedException $e, Request $request) use ($envelope) {
             if ($request->is('api/*')) {
                 return $envelope(__('api.reservation.cancellation_not_allowed'), 422, ['reason' => $e->reason]);
+            }
+        });
+        $exceptions->renderable(function (LifecycleStepIncompleteException $e, Request $request) use ($envelope) {
+            if ($request->is('api/*')) {
+                return $envelope(__('api.reservation.step_incomplete'), 422, [
+                    'reason' => $e->reason,
+                    'status' => $e->currentStatus,
+                ]);
+            }
+        });
+        $exceptions->renderable(function (DepositRuleUndefinedException $e, Request $request) use ($envelope) {
+            if ($request->is('api/*')) {
+                return $envelope(__('api.guest_booking.deposit_rule_undefined'), 422, ['reason' => 'deposit_amount_rule_undefined']);
             }
         });
         $exceptions->renderable(function (PaymentRefundFailedException $e, Request $request) use ($envelope) {

@@ -50,11 +50,8 @@ class ReservationTransitionApiTest extends TestCase
             'PENDING -> CANCELLED' => ['pending', 'cancelled'],
             'DEPOSIT_HELD -> VERIFIED' => ['deposit_held', 'verified'],
             'DEPOSIT_HELD -> CANCELLED' => ['deposit_held', 'cancelled'],
-            'VERIFIED -> CHECKED_IN' => ['verified', 'checked_in'],
             'VERIFIED -> CANCELLED' => ['verified', 'cancelled'],
             'CHECKED_IN -> IN_STAY' => ['checked_in', 'in_stay'],
-            'IN_STAY -> CHECKOUT_IN_PROGRESS' => ['in_stay', 'checkout_in_progress'],
-            'CHECKOUT_IN_PROGRESS -> CHECKED_OUT' => ['checkout_in_progress', 'checked_out'],
             'CHECKOUT_IN_PROGRESS -> CHECKOUT_BLOCKED' => ['checkout_in_progress', 'checkout_blocked'],
             'CHECKED_OUT -> INVOICED' => ['checked_out', 'invoiced'],
         ];
@@ -73,6 +70,40 @@ class ReservationTransitionApiTest extends TestCase
             ->assertJsonPath('data.status', $to);
 
         $this->assertSame($to, $reservation->fresh()->status);
+    }
+
+    /**
+     * A move runs the step's real flow (see StaffReservationLifecycleTest
+     * for the full journey), so these are refused on a bare reservation
+     * exactly as the app would refuse them: check-in needs a confirmed
+     * deposit, and checkout needs a payment to settle the balance.
+     *
+     * The third value is where the flow leaves the reservation: checkout
+     * opens (in_stay -> checkout_in_progress) before the settlement is
+     * refused, exactly as the guest app's checkout does.
+     *
+     * @return array<string, array{string, string, string}>
+     */
+    public static function transitionsNeedingTheirFlowPreconditions(): array
+    {
+        return [
+            'VERIFIED -> CHECKED_IN (no deposit hold)' => ['verified', 'checked_in', 'verified'],
+            'IN_STAY -> CHECKOUT_IN_PROGRESS (no payment to settle)' => ['in_stay', 'checkout_in_progress', 'checkout_in_progress'],
+            'CHECKOUT_IN_PROGRESS -> CHECKED_OUT (no payment to settle)' => ['checkout_in_progress', 'checked_out', 'checkout_in_progress'],
+        ];
+    }
+
+    #[DataProvider('transitionsNeedingTheirFlowPreconditions')]
+    public function test_a_move_is_refused_when_its_real_flow_preconditions_are_missing(string $from, string $to, string $leftAt): void
+    {
+        $owner = User::factory()->groupOwner()->create();
+        $reservation = $this->reservation($from);
+
+        $this->transition($owner, $reservation, ['target_status' => $to])
+            ->assertStatus(422)
+            ->assertJsonPath('success', false);
+
+        $this->assertSame($leftAt, $reservation->fresh()->status);
     }
 
     public function test_successful_transition_writes_a_status_changed_audit_entry(): void

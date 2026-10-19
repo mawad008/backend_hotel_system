@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Domain\DigitalAccess\Services\DigitalAccessService;
 use App\Domain\HotelGroup\Models\Hotel;
 use App\Domain\Inventory\Services\RoomTypeService;
+use App\Domain\Lifecycle\Services\StaffReservationLifecycleService;
 use App\Domain\Reservation\Models\Reservation;
 use App\Domain\Reservation\Services\ReservationCancellationService;
 use App\Domain\Reservation\Services\ReservationExtensionService;
@@ -32,6 +33,7 @@ class ReservationController extends Controller
         private readonly ReservationExtensionService $extensions,
         private readonly FolioService $folios,
         private readonly ReservationCancellationService $cancellations,
+        private readonly StaffReservationLifecycleService $lifecycle,
         private readonly DigitalAccessService $digitalAccess,
     ) {}
 
@@ -111,17 +113,29 @@ class ReservationController extends Controller
             abort(404);
         }
 
-        $this->authorize('transition', $found);
+        $target = $request->validated('target_status');
 
         // A staff cancellation goes through the cancellation policy so the
         // deposit is released when the guest is entitled to a refund.
-        $updated = $request->validated('target_status') === Reservation::STATUS_CANCELLED
-            ? $this->cancellations->cancelByStaff($found, $request->user(), $request->input('reason'))
-            : $this->reservations->transitionTo(
-                $found,
-                $request->validated('target_status'),
-                $request->user(),
-            );
+        if ($target === Reservation::STATUS_CANCELLED) {
+            $this->authorize('transition', $found);
+            $updated = $this->cancellations->cancelByStaff($found, $request->user(), $request->validated('reason'));
+
+            return $this->success(new ReservationResource($updated), __('api.updated'));
+        }
+
+        // Every other move runs the step's real flow (deposit hold, identity,
+        // check-in, checkout) — a management override of the guest's own
+        // actions, never a bare status write.
+        $this->authorize('advance', $found);
+
+        $updated = $this->lifecycle->advance(
+            $found,
+            $target,
+            $request->user(),
+            $request->validated('reason'),
+            $request->idempotencyKey(),
+        );
 
         return $this->success(new ReservationResource($updated), __('api.updated'));
     }

@@ -14,6 +14,7 @@ use App\Domain\Inventory\Repositories\EloquentRoomRepository;
 use App\Domain\Inventory\Repositories\EloquentRoomTypeRepository;
 use App\Domain\Payment\Models\Payment;
 use App\Domain\Payment\Repositories\EloquentPaymentRepository;
+use App\Domain\Payment\Repositories\EloquentPaymentTransactionRepository;
 use App\Domain\Reservation\Models\Reservation;
 use App\Domain\Reservation\Repositories\EloquentGuestRepository;
 use App\Domain\Reservation\Repositories\EloquentReservationRepository;
@@ -33,6 +34,7 @@ abstract class DigitalAccessWorkflowTestCase extends TestCase
             new EloquentAccessGrantRepository,
             new EloquentReservationRepository,
             new EloquentPaymentRepository,
+            new EloquentPaymentTransactionRepository,
             new EloquentIdentityVerificationSessionRepository,
             new ReservationService(
                 new EloquentReservationRepository,

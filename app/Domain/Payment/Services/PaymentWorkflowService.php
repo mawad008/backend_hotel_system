@@ -4,6 +4,7 @@ namespace App\Domain\Payment\Services;
 
 use App\Domain\Audit\Services\AuditLogger;
 use App\Domain\IdentityAccess\Models\User;
+use App\Domain\Payment\Exceptions\DepositRuleUndefinedException;
 use App\Domain\Payment\Exceptions\IdempotencyKeyConflictException;
 use App\Domain\Payment\Exceptions\InvalidPaymentAmountException;
 use App\Domain\Payment\Exceptions\InvalidPaymentCurrencyException;
@@ -83,6 +84,49 @@ class PaymentWorkflowService
         private readonly ReservationService $reservationService,
         private readonly AuditLogger $auditLogger,
     ) {}
+
+    /**
+     * Take the reservation's booking deposit — the one rule the guest app
+     * and the dashboard both follow, so a deposit started from either is
+     * identical. The amount is the hotel's `deposit_percentage` of the
+     * stay price (never a client value), in the reservation's snapshotted
+     * currency. A 0% hotel takes no hold: the reservation is confirmed
+     * straight away and null is returned.
+     *
+     * MUST NOT be called from inside an open DB transaction (§3).
+     *
+     * @throws DepositRuleUndefinedException if the hotel has no deposit percentage
+     * @throws PaymentHoldNotAllowedException|PaymentAlreadyInitiatedException|IdempotencyKeyConflictException
+     */
+    public function holdDeposit(
+        Reservation $reservation,
+        ?string $idempotencyKey = null,
+        ?SimulationDirective $simulationDirective = null,
+        ?User $actor = null,
+    ): ?Payment {
+        $hotel = $reservation->hotel;
+
+        if ($hotel?->deposit_percentage === null) {
+            throw new DepositRuleUndefinedException;
+        }
+
+        if (bccomp((string) $hotel->deposit_percentage, '0', 2) === 0) {
+            if ($reservation->status === Reservation::STATUS_PENDING) {
+                $this->reservationService->transitionTo($reservation, Reservation::STATUS_DEPOSIT_HELD, $actor);
+            }
+
+            return null;
+        }
+
+        return $this->initiateHold(
+            reservation: $reservation,
+            amount: $hotel->depositFor((string) $reservation->price_snapshot),
+            currency: $reservation->currency,
+            idempotencyKey: $idempotencyKey,
+            simulationDirective: $simulationDirective,
+            actor: $actor,
+        );
+    }
 
     /**
      * Initiate (or idempotently replay) a deposit hold for a PENDING
